@@ -1,0 +1,100 @@
+@import java.util.Calendar
+@()(implicit request: play.api.mvc.RequestHeader)
+@copyrightYear() = @{
+    val nowYear = Calendar.getInstance().get(Calendar.YEAR);
+    val firstCreateYear = 2015;
+    if(nowYear == firstCreateYear) {
+        firstCreateYear
+    } else {
+        firstCreateYear + "-" + nowYear
+    }
+}
+
+@main("Reactive Solar Farm Monitor") {
+    <body
+    fullbleed
+    unresolved
+    ng-app="energy-monitor"
+    data-ws-url="@routes.Application.energySocket().webSocketURL()">
+        <paper-drawer-panel>
+            <paper-header-panel drawer class="shadow-right">
+                <paper-toolbar id="logo">
+                    <p>
+                        Reactive<br>
+                        <span>Solar Farm Monitor</span>
+                    </p>
+                </paper-toolbar>
+                <div ng-controller="Monitor">
+                    @* ngHandsontable使用 *@
+                    @* ソートを有効にすると描画が非常に重くなる
+                    columnSorting="true"
+                    *@
+                    <hot-table
+                    id="solar-table"
+                    settings="{
+                    stretchH: 'all',
+                    disableVisualSelection: true,
+                    currentRowClassName: 'currentRow'
+                 }"
+                    colHeaders="true"
+                    columns="columns"
+                    datarows="panels"
+                    fillHandle="false"
+                    multiSelect="false"
+                    outsideClickDeselects="false"
+                    height="600">
+                    </hot-table>
+                    <p class="text-center">現在のパネルの総数：{{panels.length}}枚</p>
+                </div>
+            </paper-header-panel>
+            <paper-header-panel main>
+                <paper-toolbar ng-controller="AlertNotification">
+                    <iron-icon icon="menu" paper-drawer-toggle></iron-icon>
+                    <span class="flex">電力の推移</span>
+                    <span id="alert-notification" ng-click="showAlertInfo()" title="Alertの詳細を表示">
+                        <iron-icon icon="announcement"></iron-icon>
+                        <span id="alert-total-count" ng-class="{'alert-exist': alertCount > 0}">
+                            <span class="text-small">{{alertCount}}</span>
+                        </span>
+                    </span>
+                    <paper-dialog id="alert-detail">
+                        <p ng-if="alertCount==0">現在アラートはありません</p>
+                        <paper-item ng-repeat="panel in alertedPanels">
+                            <iron-icon icon="trending-down" title="パネルの発電性能が低下している可能性があります" affirmative></iron-icon>
+                            <p class="alert-count">× {{ panel.count }}</p>
+                            <paper-item-body class="alert-info flex" two-line>
+                                <p class="text-id" ng-click="showChart(panel.panelId)" title="グラフを表示">
+                                    {{ panel.panelId }}</p>
+                                <p class="text-time">Latest: {{ panel.measuredTime | date:'yyyy/MM/dd HH:mm:ss' }}</p>
+                            </paper-item-body>
+                            <iron-icon icon="delete" ng-click="delete(panel.panelId)" title="削除"></iron-icon>
+                        </paper-item>
+                    </paper-dialog>
+                </paper-toolbar>
+                <div id="line-chart" ng-controller="LineChart">
+                    <p class="chart-title">{{title}}</p>
+                    <p class="chart-axis-title-y">電力 [W]</p>
+                    <canvas id="line" class="chart chart-line" data="data"
+                    labels="labels" legend="false" series="series"
+                    click="onClick">
+                    </canvas>
+                    <p class="chart-axis-title-x">測定時刻</p>
+                    <div id="line-chart-nodata-cover" ng-class="{nodata: nodata}">
+                        <p>
+                            データがありません
+                        </p>
+                    </div>
+                </div>
+                <p id="footer">
+                    <a id="GitHub-link" href="https://github.com/tech-sketch/reactive-solar-farm-monitor">
+                        @*GitHub Repository*@
+                        <img class="GitHub-logo" src="https://assets-cdn.github.com/images/modules/logos_page/GitHub-Logo.png">
+                    </a>
+                    <span id="copy-right">
+                            &copy; @copyrightYear() TIS Inc.
+                    </span>
+                </p>
+            </paper-header-panel>
+        </paper-drawer-panel>
+    </body>
+}

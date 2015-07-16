@@ -1,0 +1,205 @@
+
+[ng-click] {
+  cursor: pointer;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.shadow-right {
+  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+}
+
+#solar-table {
+  .handsontable {
+    tbody {
+      tr {
+        cursor: pointer;
+
+        &:hover td {
+          background-color: rgb(230, 255, 255);
+        }
+        td.highlight,
+        td.currentRow {
+          background-color: rgb(197, 239, 247);
+        }
+      }
+    }
+
+    td:not(:last-child),
+    th:not(:last-child) {
+      border-right: none;
+    }
+    td:not(.htNumeric) {
+      text-align: center;
+    }
+
+    /* Handsontable 0.13.1（0.14未満）の場合用：disableVisualSelection設定が無いため選択枠を矯正非表示
+     * Handsontable 0.14.xの場合、ホイールスクロール時にエラー（ただし実害はない）が発生するため0.13.1に戻した
+     */
+    .wtBorder {
+      display: none !important;
+    }
+  }
+}
+
+#line-chart {
+  background-color: white;
+  width: 95%;
+  margin: 20px auto 0;
+
+  .chart-title {
+    text-align: center;
+    font-size: 150%;
+  }
+  .chart-axis-title-x {
+    font-size: 120%;
+    margin-top: 0;
+    text-align: center;
+  }
+  .chart-axis-title-y {
+    font-size: 120%;
+    margin-bottom: 0;
+  }
+  position: relative;
+
+  #line-chart-nodata-cover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background-color: white;
+    opacity: 0.7;
+
+    display: none;
+
+    &.nodata {
+      display: block;
+    }
+
+    p {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      margin: 0;
+
+      text-align: center;
+      font-size: 200%;
+    }
+  }
+}
+
+#alert-notification {
+  margin-right: 10px;
+  > * {
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  iron-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  #alert-total-count {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    overflow: hidden;
+
+    position: absolute;
+    top: 10px;
+    right: 16px;
+
+    background-color: black;
+
+    &.alert-exist {
+      background-color: red;
+    }
+
+    .text-small {
+      font-size: 70%;
+    }
+  }
+}
+
+#alert-detail {
+  position: fixed;
+  top: 64px;
+  right: 0px;
+  margin: 10px;
+  width: 400px;
+
+  [ng-click] {
+    cursor: pointer;
+  }
+
+  .text-id {
+    font-size: 120%;
+  }
+  .text-time {
+    font-size: 80%;
+    color: #B0BEC5;
+  }
+
+  paper-item {
+    margin: 0;
+
+    .alert-info {
+      margin-left: 10px;
+      p {
+        margin: 0;
+      }
+    }
+
+    .alert-count {
+      margin-right: 10px;
+      color: #B0BEC5;
+    }
+
+    &:hover {
+      background-color: lightcyan;
+    }
+  }
+}
+
+#logo {
+  background-color: #FFC107;
+  color: #212121;
+  font-family: cursive;
+
+  font-size: 104%;
+
+  span {
+    font-size: 136%;
+    padding-left: 11px;
+  }
+}
+
+paper-header-panel[main] paper-toolbar {
+  background-color: #0288D1;
+}
+
+#footer {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  left: 0;
+
+  font-size: 80%;
+  margin: 0 20px 10px 20px;
+
+  #GitHub-link {
+    .GitHub-logo {
+      height: 1em;
+    }
+  }
+  #copy-right {
+    position: absolute;
+    right: 0;
+  }
+}

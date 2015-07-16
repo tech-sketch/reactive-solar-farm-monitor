@@ -1,0 +1,24 @@
+{
+  "name": "reactive-solar-farm-monitor",
+  "dependencies": {
+    "angular": "^1.x",
+    "angular-chart.js": "^0.7.1",
+    "handsontable": "0.13.1",
+    "nghandsontable": "0.5.1",
+    "paper-dialog": "PolymerElements/paper-dialog#^1.0.0",
+    "paper-header-panel": "PolymerElements/paper-header-panel#^1.0.0",
+    "paper-toolbar": "PolymerElements/paper-toolbar#^1.0.0",
+    "iron-icon": "polymerelements/iron-icon#^1.0.0",
+    "iron-icons": "polymerelements/iron-icons#^1.0.0",
+    "paper-drawer-panel": "PolymerElements/paper-drawer-panel#^1.0.0",
+    "paper-item": "PolymerElements/paper-item#^1.0.0"
+  },
+  "resolutions": {
+    "handsontable": "0.13.1",
+    "polymer": "^1.0.0",
+    "webcomponentsjs": "^0.7.2",
+    "paper-dialog": "^1.0.0",
+    "web-animations-js": "^2.0.0",
+    "paper-item": "^1.0.0"
+  }
+}
