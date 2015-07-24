@@ -43,7 +43,7 @@ Also, the system has the following requirements.
 
 Architecture
 --------------
-This sample application uses [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform), adopts Message-driven architecture.
+This sample application uses [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform), and adopts Message-driven architecture.
 
 ![architecture](img/reactive-solar-farm-monitor_architecture.png)
 
@@ -78,9 +78,9 @@ How to install via [Typesafe Activator](https://www.typesafe.com/get-started) is
 
 Please send feedback to us.
 
-[TIS Inc.](http://www.tis.com/)
-System Development Technology R&D Office
-Reactive Systems consulting team
+[TIS Inc.](http://www.tis.com/)  
+System Development Technology R&D Office  
+Reactive Systems consulting team  
 
 * <go-reactive@tis.co.jp>.
 
@@ -94,6 +94,6 @@ The Apache License version2.0 official full text is published at this [link](htt
 ---------
 
 * All company names and product mentioned are trademarks or registered of the respective companies.
-※ Icon made by [Freepik](http://www.freepik.com) from [www.flaticon.com](http://www.flaticon.com) is licensed under [CC BY 3.0](http://creativecommons.org/licenses/by/3.0/)
+* Icon made by [Freepik](http://www.freepik.com) from [www.flaticon.com](http://www.flaticon.com) is licensed under [CC BY 3.0](http://creativecommons.org/licenses/by/3.0/)
 
 Copyright © 2015 TIS Inc.
