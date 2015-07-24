@@ -1,34 +1,37 @@
 Reactive Solar Farm Monitor
 ===========================
 
-(English/[日本語](README.ja.md))
+(English/[Japanese](README.ja.md))
 
-Reactive Solar Farm Monitor is a sample application which is implemented by using [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform).
+Reactive Solar Farm Monitor is a sample application which is implemented on [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform).
 
 What is Reactive Systems?
 --------------------------
-Reactive Systems satisfy all of the below requirements:
-* Keep speedy responses and provide high usability
-* Achieve extreamly near 100% uptime
+Reactive Systems satisfy all of the following requirements:
+* Keep the system response quick and provide high usability
+* Uptime close to 100% as possible
 * Scale-out and Scale-in are easy when workload fluctuates
 
-Please refer to [The Reactive Manifesto](http://www.reactivemanifesto.org/) for detail.
+Please refer to [The Reactive Manifesto](http://www.reactivemanifesto.org/) for details.
 
 What is Typesafe Reactive Platform?
 ---------------------------------
 
+Typesafe Reactive Platform is a Platform for Building Message-Driven, Elastic, Resilient
+and Responsive Applications Leveraging the Java Virtual Machine.
 
-Typesafe Reactive Platform is an integrated platform which has [Play Framework](https://playframework.com/), [Akka](http://akka.io/), and [Scala](http://www.scala-lang.org/)(or [Java](https://www.java.com/) ) for creating Reactive Systems. Reactive Systems created by this platform on JVM.
+To help developers build Reactive applications on the JVM,
+Typesafe has brought together the [Play Framework](https://playframework.com/), a runtime
+called [Akka](http://akka.io/), and the [Scala](http://www.scala-lang.org/) language under a unified platform.
 
-Please refer to [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform) for detail.
+Please refer to [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform) for details.
 
 What is Reactive Solar Farm Monitor?
 ----
-This sample application is assumed a failure detection system of many solar panels which huge Solar Farm has.
+This sample application is a failure detection system of solar panels in the "Solar Farm" (photovoltaic power plant).
 
+It is assumed that Solar farm has tens of thousands of solar panels, and each panel has the measuring device which successively measures and send the amount of power generation. This application calculates the mean value of amounts of power generation of all solar panels, and compares the each amount of power generation with the mean value. If the value has fallen below the mean significantly, the application regards the solar panel as failure.
 
-Solar farm has several ten thousand panels, and each panel has a power generation measure device. How do you detect failures of the solar panels? If the power generation of the panels is reduced, do you regard the panels as failure? In this case, when it is also bad weather, you regard the panels as failure.
-And so, this application is compare mean of the power generation of all panels and the power generation of each panel. Then, the application regard the panels whose power generation are reduced by a remarkable amount is failure.
 
 ![abstract](img/reactive-solar-farm-monitor_abstract.png)
 
@@ -40,7 +43,7 @@ Also, the system has the following requirements.
 
 Architecture
 --------------
-This sample application use [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform), and created by Message-Driven.
+This sample application uses [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform), adopts Message-driven architecture.
 
 ![architecture](img/reactive-solar-farm-monitor_architecture.png)
 
@@ -49,12 +52,12 @@ Screenshot
 
 ![screenshot](img/reactive-solar-farm-monitor_screenshot.png)
 
-Get Started.
+Get Started
 ---------
 
 ### Use Docker
 
-Execute the following commands. The requirement of a hosts is only [Docker](https://www.docker.com/).
+Execute the following commands on the PC which has already been installed [Docker](https://www.docker.com/).
 
 ~~~
 docker run -d --name=broker   -p 61613:61613                        crowbary/apache-apollo
@@ -63,7 +66,7 @@ docker run -d --name=analyzer -p 2551:2551 --link=broker:broker     crowbary/rea
 docker run -d --name=monitor  -p 9000:9000 --link=analyzer:analyzer crowbary/reactive-solar-farm-monitor
 ~~~
 
-Access to http://[DOCKER_HOST]:9000/
+Access to http://[DOCKER_HOST]:9000/ from Web browser
 
 * DOCKER_HOST: The IP address of a host on which you executed "docker run" commands.
 
@@ -78,13 +81,14 @@ Please send feedback to us.
 [TIS Inc.](http://www.tis.com/)
 System Development Technology R&D Office
 Reactive Systems consulting team
-<go-reactive@tis.co.jp>.
 
-TIS provides a consulting service about Typesafe Reactive Platform. Please refer to the [our site](http://www.tis.jp/service_solution/goreactive/) for detail.
+* <go-reactive@tis.co.jp>.
+
+TIS provides a consulting service about Typesafe Reactive Platform. Please refer to the [our site](http://www.tis.jp/service_solution/goreactive/)(Japanese site) for details.
 
 # License
 
-Skalholt is released under the Apache License version2.0.
+This application is released under the Apache License version2.0.
 The Apache License version2.0 official full text is published at this [link](http://www.apache.org/licenses/LICENSE-2.0.html).
 
 ---------
