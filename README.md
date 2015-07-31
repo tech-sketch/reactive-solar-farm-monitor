@@ -1,57 +1,63 @@
 Reactive Solar Farm Monitor
 ===========================
 
-Reactive Solar Farm Monitor は [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform) を利用したリアクティブシステムの具体例を示すため作成されたサンプル実装です。
+(English/[Japanese](README.ja.md))
 
-リアクティブシステムとは？
+Reactive Solar Farm Monitor is a sample application which is implemented on [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform).
+
+What is Reactive Systems?
 --------------------------
-下記の要件を満たすシステムがリアクティブシステムです。
-* すばやい応答時間を保ち高いユーザービリティを実現
-* 限りなく100%に近い稼働率を達成
-* ワークロードが変動してもスケールアウト/スケールインが容易
+Reactive Systems satisfy all of the following requirements:
+* Keep the system response quick and provide high usability
+* Uptime close to 100% as possible
+* Scale-out and Scale-in are easy when workload fluctuates
 
-詳細は[リアクティブ宣言](http://www.reactivemanifesto.org/ja)を参照してください。
+Please refer to [The Reactive Manifesto](http://www.reactivemanifesto.org/) for details.
 
-Typesafe Reactive Platform とは？
+What is Typesafe Reactive Platform?
 ---------------------------------
-[Play Framework](https://playframework.com/)、[Akka](http://akka.io/)、[Scala](http://www.scala-lang.org/)、[Java](https://www.java.com/) を組み合わせることでリアクティブシステムを実現することができる開発基盤です。
 
-詳細は [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform) を参照してください。
+Typesafe Reactive Platform is a Platform for Building Message-Driven, Elastic, Resilient
+and Responsive Applications Leveraging the Java Virtual Machine.
 
-概要
+To help developers build Reactive applications on the JVM,
+Typesafe has brought together the [Play Framework](https://playframework.com/), a runtime
+called [Akka](http://akka.io/), and the [Scala](http://www.scala-lang.org/) language under a unified platform.
+
+Please refer to [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform) for details.
+
+What is Reactive Solar Farm Monitor?
 ----
-本サンプルシステムはソーラーファーム(大規模な太陽光発電所)に設置されたソーラーパネルの故障を検知するシステムを想定しています。
+This sample application is a failure detection system of solar panels in the "Solar Farm" (photovoltaic power plant).
 
-ソーラーファームには数万枚のソーラーパネルが設置されており、各ソーラーパネルにはそのパネルの発電量を逐次測定するデバイスが取り付けられています。
-このデバイスが測定した発電量をもとにソーラーパネルの故障を検知できないでしょうか。
-単にソーラーパネルの発電量が低下(ある閾値を下回る)したことを故障としてしまうと、悪天候でたまたま発電量が少なくなってしまった場合もソーラーパネルが故障したとみなされてしまいます。
-そこで、このシステムではある瞬間における全ソーラーパネルの平均発電量と各ソーラーパネルの発電量を比較し、発電量が著しく平均を下回っているソーラーパネルを故障したとみなしています。
+It is assumed that Solar farm has tens of thousands of solar panels, and each panel has the measuring device which successively measures and send the amount of power generation. This application calculates the mean value of amounts of power generation of all solar panels, and compares the each amount of power generation with the mean value. If the value has fallen below the mean significantly, the application regards the solar panel as failure.
+
 
 ![abstract](img/reactive-solar-farm-monitor_abstract.png)
 
-また、このシステムには達成しなければならない下記のような要件があります。
+Also, the system has the following requirements.
 
-* ソーラーファームの発電効率を高めるため、ソーラーパネルの故障は1秒以内に検知できる
-* 故障検知までのタイムラグが生じないように、稼働率は100%を達成する
-* ソーラーファームの規模が拡大しソーラーパネルが増えた場合にスケールアウトできる
+* I want to detect failures of solar panels with in 1 second after failure, to improve generation efficiency.
+* I want to achieve 100% uptime to no time lag after detect failures.
+* I can scale-out the system, if solar panels increase
 
-アーキテクチャ
+Architecture
 --------------
-本サンプルシステムは [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform) を利用し、メッセージ駆動のアーキテクチャを採用しています。
+This sample application uses [Typesafe Reactive Platform](http://www.typesafe.com/products/typesafe-reactive-platform), and adopts Message-driven architecture.
 
 ![architecture](img/reactive-solar-farm-monitor_architecture.png)
 
-スクリーンショット
+Screenshot
 ------------------
 
 ![screenshot](img/reactive-solar-farm-monitor_screenshot.png)
 
-起動方法
+Get Started
 ---------
 
-### Docker を利用した起動
+### Use Docker
 
-[Docker](https://www.docker.com/) がインストールされたPCで下記のコマンドを実行してください。
+Execute the following commands on the PC which has already been installed [Docker](https://www.docker.com/).
 
 ~~~
 docker run -d --name=broker   -p 61613:61613                        crowbary/apache-apollo
@@ -60,34 +66,34 @@ docker run -d --name=analyzer -p 2551:2551 --link=broker:broker     crowbary/rea
 docker run -d --name=monitor  -p 9000:9000 --link=analyzer:analyzer crowbary/reactive-solar-farm-monitor
 ~~~
 
-ブラウザで http://[DOCKER_HOST]:9000/ へアクセスしてください。
-* DOCKER_HOST: 上記の docker run コマンドを実行したホストのIPアドレスまたはホスト名
+Access to http://[DOCKER_HOST]:9000/ from Web browser
 
-### Typesafe Activator を利用した起動
+* DOCKER_HOST: The IP address of a host on which you executed "docker run" commands.
 
-[Typesafe Activator](https://www.typesafe.com/get-started) を利用した起動方法を現在準備中です。
+### Use Typesafe Activator
 
-問い合わせ先
--------------
-フィードバックや不明点等については下記までお問い合わせください。
+How to install via [Typesafe Activator](https://www.typesafe.com/get-started) is currently being prepared.
 
-TIS株式会社  
-生産革新本部 生産革新部 生産技術R&D室  
-リアクティブシステムコンサルティングサービス担当宛
+# Contact
 
-<a href="mailto:go-reactive@tis.co.jp">go-reactive@tis.co.jp</a>
+Please send feedback to us.
 
-弊社は Typesafe Reactive Platform に関するコンサルティングサービスを提供しています。
-コンサルティングサービスの概要は[こちら](http://www.tis.jp/service_solution/goreactive/)からご確認いただくことができます。
+[TIS Inc.](http://www.tis.com/)  
+System Development Technology R&D Office  
+Reactive Systems consulting team  
 
-ライセンス
-----------
-Reactive Solar Farm Monitor は Apache License version 2.0 のもとにリリースされています。
-Apache License version 2.0 の全文は[こちら](http://www.apache.org/licenses/LICENSE-2.0.html)からご覧いただくことができます。
+* <go-reactive@tis.co.jp>.
+
+TIS provides a consulting service about Typesafe Reactive Platform. Please refer to the [our site](http://www.tis.jp/service_solution/goreactive/)(Japanese site) for details.
+
+# License
+
+This application is released under the Apache License version2.0.
+The Apache License version2.0 official full text is published at this [link](http://www.apache.org/licenses/LICENSE-2.0.html).
 
 ---------
 
-※ 記載されている会社名、製品名は、各社の登録商標または商標です。  
-※ Icon made by [Freepik](http://www.freepik.com) from [www.flaticon.com](http://www.flaticon.com) is licensed under [CC BY 3.0](http://creativecommons.org/licenses/by/3.0/)
+* All company names and product mentioned are trademarks or registered of the respective companies.
+* Icon made by [Freepik](http://www.freepik.com) from [www.flaticon.com](http://www.flaticon.com) is licensed under [CC BY 3.0](http://creativecommons.org/licenses/by/3.0/)
 
 Copyright © 2015 TIS Inc.
