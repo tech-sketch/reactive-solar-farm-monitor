@@ -72,7 +72,75 @@ Access to http://[DOCKER_HOST]:9000/ from Web browser
 
 ### Use Typesafe Activator
 
-How to install via [Typesafe Activator](https://www.typesafe.com/get-started) is currently being prepared.
+#### 1. Before running
+
+##### (1) Install Typesafe Activator
+
+* Requirements: JDK6+
+* Download the package from [Typesafe Activator's site'](https://www.typesafe.com/get-started)
+* Extract the package and add Activator to your PATH
+
+##### (2) Install Apache Apollo
+
+* Download the distribution archive from  [Apache Apollo's site](https://activemq.apache.org/apollo/download.html)
+* Extract the distribution archive to ${APOLLO_HOME}
+* Create Broker Instance on ${APOLLO_EXEC}
+~~~
+cd ${APOLLO_EXEC}
+${APOLLO_HOME}\bin\apollo create mybroker
+~~~
+* Refer to [here](http://activemq.apache.org/apollo/versions/1.7.1/website/documentation/getting-started.html)
+
+
+##### (3) Install Bower
+
+* Install [Node.js](https://nodejs.org/)
+* Install [Git](http://git-scm.com/downloads)
+    * If you use Windows, you need to available Git commands by checking "Use Git from the Windows Command Prompt" on "Adjusting your PATH environment"
+* Install [Bower](http://bower.io/#install-bower)
+
+~~~
+npm install -g bower
+~~~
+
+
+#### 2. Create a project and run
+
+##### (1) Create a project
+
+~~~
+activator new reactive-solar-farm-monitor reactive-solar-farm-monitor
+cd  reactive-solar-farm-monitor
+bower install
+~~~
+
+##### (2) Run Broker
+
+~~~
+${APOLLO_EXEC}\mybroker\bin\apollo-broker run
+~~~
+
+##### (3) Run Simulator
+
+~~~
+activator solarFarmSimulator/run
+~~~
+
+##### (4) Run Analyzer
+
+~~~
+activator analyzer/run
+~~~
+
+##### (5) Run Monitor
+
+~~~
+activator run
+~~~
+
+#### 3. Check the application
+
+Access to [http://localhost:9000/](http://localhost:9000/) from Web browser
 
 # Contact
 

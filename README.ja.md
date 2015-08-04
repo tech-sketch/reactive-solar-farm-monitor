@@ -65,9 +65,79 @@ docker run -d --name=monitor  -p 9000:9000 --link=analyzer:analyzer crowbary/rea
 ブラウザで http://[DOCKER_HOST]:9000/ へアクセスしてください。
 * DOCKER_HOST: 上記の docker run コマンドを実行したホストのIPアドレスまたはホスト名
 
-### Typesafe Activator を利用した起動
+### Typesafe Activatorを利用した起動
 
-[Typesafe Activator](https://www.typesafe.com/get-started) を利用した起動方法を現在準備中です。
+#### 1. 実行前の環境構築
+
+##### (1) Typesafe Activatorのインストール
+
+* JDK6以上が必要
+* [Typesafe Activatorのサイト](https://www.typesafe.com/get-started)よりインストーラをダウンロード
+* 任意ディレクトリに解凍し、環境変数「PATH」に追加
+
+##### (2) Apache Apolloのインストール
+
+* [Apache Apolloのサイト](https://activemq.apache.org/apollo/download.html) よりインストーラをダウンロード
+* 任意ディレクトリ（${APOLLO_HOME}）に解凍
+* 任意ディレクトリ（${APOLLO_EXEC}）でBroker Instanceの作成
+~~~
+cd ${APOLLO_EXEC}
+${APOLLO_HOME}\bin\apollo create mybroker
+~~~
+* ※ [参考サイト](http://activemq.apache.org/apollo/versions/1.7.1/website/documentation/getting-started.html)
+
+
+##### (3) Bowerのインストール
+
+* [Node.js](https://nodejs.org/)のインストール
+* [Git](http://git-scm.com/downloads)のインストール
+    * Windowsの場合、「Adjusting your PATH environment」で「Use Git from the Windows Command Prompt」をチェックしGitコマンドを有効にする
+* [Bower](http://bower.io/#install-bower)のインストール
+
+~~~
+npm install -g bower
+~~~
+
+
+#### 2. プロジェクトの作成と実行
+
+##### (1) プロジェクトの作成
+
+任意ディレクトリでプロジェクトを作成
+
+~~~
+activator new reactive-solar-farm-monitor reactive-solar-farm-monitor
+cd  reactive-solar-farm-monitor
+bower install
+~~~
+
+##### (2) Brokerの実行
+
+~~~
+${APOLLO_EXEC}\mybroker\bin\apollo-broker run
+~~~
+
+##### (3) Simulatorの実行
+
+~~~
+activator solarFarmSimulator/run
+~~~
+
+##### (4) Analyzerの実行
+
+~~~
+activator analyzer/run
+~~~
+
+##### (5) Monitorの実行
+
+~~~
+activator run
+~~~
+
+#### 3. アプリケーションの確認
+
+ブラウザで [http://localhost:9000/](http://localhost:9000/) へアクセスしてください。
 
 問い合わせ先
 -------------
