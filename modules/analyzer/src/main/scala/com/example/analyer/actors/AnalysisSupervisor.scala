@@ -2,6 +2,7 @@ package com.example.analyer.actors
 
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
+import akka.contrib.pattern.ClusterReceptionistExtension
 import akka.event.LoggingReceive
 import akka.routing.FromConfig
 import com.example.analyer.actors.inspection.InspectionSupervisor
@@ -24,8 +25,11 @@ class AnalysisSupervisor extends Actor with ActorLogging {
   def createChannel() =
     context.actorOf(Channel.props(createBuffer()), "buffer-channel")
 
-  def createBuffer() =
-    context.actorOf(Props[Buffer], "buffer")
+  def createBuffer() = {
+    val buffer = context.actorOf(Props[Buffer], "buffer")
+    ClusterReceptionistExtension(context.system).registerService(buffer)
+    buffer
+  }
 
   override def preStart() = {
     createChannel()

@@ -23,7 +23,7 @@ lazy val root = (project in file(".")).
         cache,
         ws,
         specs2 % Test
-    ),
+    ) ++ akkaDependencies,
     // Play provides two styles of routers, one expects its actions to be injected, the
     // other, legacy style, accesses its actions statically.
     routesGenerator := InjectedRoutesGenerator,
@@ -51,6 +51,8 @@ lazy val analysisApi = (project in file("modules/analysis-api")).
     libraryDependencies += json
   )
 
+lazy val runSub = taskKey[Unit]("")
+
 lazy val analyzer = (project in file("modules/analyzer")).
   enablePlugins(JavaAppPackaging).
   settings(commonSettings: _*).
@@ -58,10 +60,12 @@ lazy val analyzer = (project in file("modules/analyzer")).
   settings(
     name := appName + "-analyzer",
     libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "3.3.0",
       specs2 % Test
     ) ++ akkaDependencies ++ mqttDependencies,
     mainClass := Some("com.example.analyer.Analyzer"),
-    fullRunInputTask(run, Compile, "com.example.analyer.Analyzer"),
+    fullRunInputTask(run, Compile, "com.example.analyer.Analyzer", "--port:2551", "--seed-nodes:127.0.0.1:2551,127.0.0.1:2552"),
+    fullRunTask(runSub, Compile, "com.example.analyer.Analyzer", "--port:2552", "--seed-nodes:127.0.0.1:2551,127.0.0.1:2552"),
     dockerExposedPorts := Seq(2551),
     dockerEntrypoint := Seq("/bin/sh", "-c",
       "HOST_IP=`ip addr show scope global | grep 'inet' | grep -Eo '[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+'`"
@@ -108,7 +112,10 @@ lazy val testkitAkka = (project in file("modules/testkit-akka")).
 
 lazy val akkaDependencies = Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.3.11",
-  "com.typesafe.akka" %% "akka-cluster" % "2.3.11"
+  "com.typesafe.akka" %% "akka-cluster" % "2.3.11",
+  "com.typesafe.akka" %% "akka-contrib" % "2.3.11",
+  "com.typesafe.akka" %% "akka-slf4j" % "2.3.11",
+  "ch.qos.logback" % "logback-classic" % "1.1.3"
 )
 
 lazy val mqttDependencies = Seq(
