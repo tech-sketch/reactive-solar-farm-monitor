@@ -16,21 +16,19 @@ class AnalysisSupervisor extends Actor with ActorLogging {
       case _ => Restart
     }
 
-  def receive = LoggingReceive {
-    case analysis.api.Connect =>
-      log.info("Connected from {}", sender)
-      val receiver = sender
-      val buffer = createBuffer(receiver)
-      createChannel(buffer)
-      createInspectionSupervisor(receiver)
+  def receive = Actor.emptyBehavior
+
+  def createInspectionSupervisor() =
+    context.actorOf(Props[InspectionSupervisor], "inspection-supervisor")
+
+  def createChannel() =
+    context.actorOf(Channel.props(createBuffer()), "buffer-channel")
+
+  def createBuffer() =
+    context.actorOf(Props[Buffer], "buffer")
+
+  override def preStart() = {
+    createChannel()
+    createInspectionSupervisor()
   }
-
-  def createInspectionSupervisor(receiver: ActorRef) =
-    context.actorOf(InspectionSupervisor.props(receiver), "inspection-supervisor")
-
-  def createChannel(buffer: ActorRef) =
-    context.actorOf(Channel.props(buffer), "buffer-channel")
-
-  def createBuffer(receiver: ActorRef) =
-    context.actorOf(Buffer.props(receiver), "buffer")
 }

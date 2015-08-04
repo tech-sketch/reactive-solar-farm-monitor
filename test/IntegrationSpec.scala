@@ -13,12 +13,11 @@ import play.api.test.Helpers._
 class IntegrationSpec extends Specification {
 
   "Application" should {
-
     "work from within a browser" in new WithBrowser(webDriver = WebDriverFactory(Helpers.FIREFOX)) {
 
       browser.goTo("http://localhost:" + port)
 
-      browser.pageSource must contain("Welcome to Play")
-    }
+      browser.pageSource must contain("Reactive Solar Farm Monitor")
+    }.pendingUntilFixed("Cannot find firefox binary in PATH.")
   }
 }

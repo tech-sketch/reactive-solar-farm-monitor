@@ -1,5 +1,6 @@
 package actors
 
+import actors.AnalyzerProxy.UnreachableAnalyzer
 import akka.actor._
 import akka.event.LoggingReceive
 import org.joda.time.DateTime
@@ -20,10 +21,7 @@ object EnergyApiActor {
 
 class EnergyApiActor(out: ActorRef, analyzerProxy: ActorRef) extends Actor with ActorLogging {
 
-  import EnergyApiActor._
   import controllers.EnergyApi._
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   def receive = LoggingReceive {
 
@@ -36,6 +34,9 @@ class EnergyApiActor(out: ActorRef, analyzerProxy: ActorRef) extends Actor with 
     case a: analysis.api.Alert =>
       val data = Json.arr(Alert(a.panelId, a.measuredValue, a.measuredDateTime, a.detectedDateTime))
       out ! Json.obj("alert" -> data)
+
+    case UnreachableAnalyzer =>
+      out ! Json.obj("error" -> Error("サーバーで問題が発生しています。しばらくお待ちください。"))
   }
 
   override def preStart() = {

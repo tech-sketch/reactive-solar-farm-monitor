@@ -6,9 +6,13 @@ package object api {
 
   type PanelId = String
 
-  case class Connect()
+  case class InspectionRequest()
 
   case class Alert(panelId: PanelId, detectedDateTime: DateTime, measuredValue: BigDecimal, measuredDateTime: DateTime)
+
+  case class DoneInspection()
+
+  case class MeasurementRequest()
 
   case class Snapshot(measurements: Map[PanelId, Measurement])
 

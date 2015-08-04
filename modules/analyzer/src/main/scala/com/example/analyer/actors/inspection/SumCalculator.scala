@@ -27,7 +27,7 @@ class SumCalculator(meanCalculator: ActorRef) extends LoggingFSM[State, Data] wi
     case Event(InspectionManager.Sample(measurement), c: SumCalculation) =>
         stay() using SumCalculation(c.sum + measurement.measuredValue, c.population + 1)
 
-    case Event(Execute(_), SumCalculation(sum, population)) =>
+    case Event(_: Execute, SumCalculation(sum, population)) =>
       meanCalculator !  PartialSum(sum, population)
       stay() using emptySum
   }

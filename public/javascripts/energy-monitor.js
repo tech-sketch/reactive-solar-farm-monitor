@@ -24,15 +24,16 @@ app.service("WebSocketService", ["$http", "$timeout", function ($http, $timeout)
         var eventListenerMap = {};
         var Events = {
             ALERT: "alert",
-            MEASUREMENT: "measurement"
+            MEASUREMENT: "measurement",
+            ERROR: "error"
         };
         this.Events = Events;
-        var eventProcessOrder = [Events.ALERT, Events.MEASUREMENT];
+        var eventProcessOrder = [Events.ALERT, Events.MEASUREMENT, Events.ERROR];
         var socket = new WebSocket(document.querySelector("[ng-app=energy-monitor]").getAttribute("data-ws-url"))
 
         /** サーバーからデータを受信した時に呼ばれる関数の登録
          * @param type
-         * WebSocketService.Events.ALERT or WebSocketService.Events.MEASUREMENT
+         * WebSocketService.Events.ALERT or WebSocketService.Events.MEASUREMENT or WebSocketService.Events.ERROR
          * @param listener
          * listenerに渡される引数は受け取ったデータ
          */
@@ -109,6 +110,31 @@ app.service("MonitorService", ["WebSocketService", function (WebSocketService) {
             if (renderFunction) {
                 renderFunction(panels);
             }
+        });
+    }]
+);
+
+/**
+ * バックエンドのエラーに関する処理を行なうサービス
+ */
+app.service("BackendErrorService", ["WebSocketService", function (WebSocketService) {
+
+        var onErrorCallback;
+        this.onError = function(callback) {
+            onErrorCallback = callback;
+        };
+
+        var onRecoverCallback;
+        this.onRecover = function(callback) {
+            onRecoverCallback = callback;
+        };
+
+        WebSocketService.addMessageListener(WebSocketService.Events.ERROR, function (error) {
+            if (onErrorCallback) { onErrorCallback(error); }
+        });
+
+        WebSocketService.addMessageListener(WebSocketService.Events.MEASUREMENT, function () {
+            if (onRecoverCallback) { onRecoverCallback(); }
         });
     }]
 );
@@ -437,4 +463,19 @@ app.controller("AlertNotification", ["$scope", "WebSocketService", "ChartService
         $scope.alertedPanels = alertedPanels;
         $scope.alertCount = alertedPanels.length;
     }
+}]);
+
+/**
+ * エラーダイアログのコントローラー
+ */
+app.controller("ErrorDialog", ["$scope", "BackendErrorService", function ($scope, BackendErrorService) {
+
+    BackendErrorService.onError(function(error) {
+        $scope.errorMessage = error.message;
+        document.getElementById("error-dialog").open();
+    });
+
+    BackendErrorService.onRecover(function() {
+        document.getElementById("error-dialog").close();
+    });
 }]);

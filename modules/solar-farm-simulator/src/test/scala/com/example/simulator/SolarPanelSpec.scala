@@ -21,7 +21,8 @@ class SolarPanelSpec extends Specification with Akka {
 
   "SolarPanel" >> {
 
-    "solar-farm-simulator.panel.measure-interval に設定した時間ごとに測定値を push する" >> new AkkaTestkitWith(
+    // TODO: まれに失敗することを無くす
+    "solar-farm-simulator.panel.measure-interval に設定した時間ごとに測定値を push する（※まれに失敗する）" >> new AkkaTestkitWith(
       ActorSystem("test", ConfigFactory.parseString(
         """
           |solar-farm-simulator.panel.measure-initial-delay = 150 milliseconds

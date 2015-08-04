@@ -32,7 +32,7 @@ class MeanCalculator(inspector: ActorRef) extends LoggingFSM[State, Data] with S
 
   when(Pending) {
 
-    case Event(Execute(population), _) =>
+    case Event(Execute(population, _), _) =>
       goto(Preparing) using SumCalculation(BigDecimal(0), 0, population)
 
     case Event(_: PartialSum, _) =>
