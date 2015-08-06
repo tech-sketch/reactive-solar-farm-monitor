@@ -5,31 +5,26 @@ import akka.actor._
 
 import scala.concurrent.duration._
 
-object CalculationSupervisor {
-
-  def props(receiver: ActorRef) = Props(new CalculationSupervisor(receiver))
-}
-
-class CalculationSupervisor(receiver: ActorRef) extends Actor with ActorLogging {
+class CalculationSupervisor extends Actor with ActorLogging {
 
   override val supervisorStrategy: SupervisorStrategy =
     AllForOneStrategy(maxNrOfRetries = 100, withinTimeRange = 1 minute) {
       case _ => Restart
     }
 
-  def receive = PartialFunction.empty
+  def receive = Actor.emptyBehavior
 
-  def createSumCalculator =
-    context.actorOf(SumCalculator.props(createMeanCalculator), "sum-calculator")
+  def createSumCalculator() =
+    context.actorOf(SumCalculator.props(createMeanCalculator()), "sum-calculator")
 
-  def createMeanCalculator =
-    context.actorOf(MeanCalculator.props(createInspector), "mean-calculator")
+  def createMeanCalculator() =
+    context.actorOf(MeanCalculator.props(createInspector()), "mean-calculator")
 
-  def createInspector =
-    context.actorOf(Inspector.props(receiver), "inspector")
+  def createInspector() =
+    context.actorOf(Props[Inspector], "inspector")
 
   override def preStart() = {
-    createSumCalculator
+    createSumCalculator()
   }
 
 }

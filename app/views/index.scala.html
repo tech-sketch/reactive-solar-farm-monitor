@@ -16,6 +16,9 @@
     unresolved
     ng-app="energy-monitor"
     data-ws-url="@routes.Application.energySocket().webSocketURL()">
+        <paper-dialog id="error-dialog" modal ng-controller="ErrorDialog">
+            <p><iron-icon icon="error"></iron-icon>{{errorMessage}}</p>
+        </paper-dialog>
         <paper-drawer-panel>
             <paper-header-panel drawer class="shadow-right">
                 <paper-toolbar id="logo">

@@ -25,20 +25,15 @@ object Buffer {
   case class TakeSnapshot()
   case class CollectGhosts()
   case class GhostsCollected(measurements: Map[PanelId, analysis.api.Measurement])
-
-  def props(receiver: ActorRef) = Props(new Buffer(receiver))
 }
 
 import Buffer._
 
-class Buffer(receiver: ActorRef) extends LoggingFSM[State, Data] with Stash with Config {
+class Buffer extends LoggingFSM[State, Data] with Stash with Config {
 
   val config = context.system.settings.config
 
   import scala.concurrent.ExecutionContext.Implicits.global
-
-  val snapshotSchedule =
-    context.system.scheduler.schedule(snapshotInitialDelay milliseconds, snapshotInterval milliseconds, self, TakeSnapshot)
 
   val ghostCollectionSchedule =
     context.system.scheduler.schedule(ghostCollectionInitialDelay milliseconds, ghostCollectionInterval milliseconds, self, CollectGhosts)
@@ -52,13 +47,13 @@ class Buffer(receiver: ActorRef) extends LoggingFSM[State, Data] with Stash with
   }
 
   when(Receiving) {
+    case Event(MeasurementRequest, chunk: Chunk) =>
+      sender ! Snapshot(chunk.measurements)
+      stay()
+
     case Event(Packet(farm.api.Measurement(panelId, measuredValue, measuredDateTime), _), chunk: Chunk) =>
       val measurement = analysis.api.Measurement(panelId, measuredValue, measuredDateTime)
       stay() using (chunk.copy(measurements = (chunk.measurements + (panelId -> measurement))))
-
-    case Event(TakeSnapshot, chunk: Chunk) =>
-      receiver ! Snapshot(chunk.measurements)
-      stay()
 
     case Event(CollectGhosts, chunk: Chunk) =>
       import scala.concurrent.ExecutionContext.Implicits.global
@@ -91,7 +86,6 @@ class Buffer(receiver: ActorRef) extends LoggingFSM[State, Data] with Stash with
   }
 
   override def postStop() = {
-    snapshotSchedule.cancel()
     ghostCollectionSchedule.cancel()
   }
 

@@ -44,19 +44,11 @@ trait Config {
 
   lazy val alertThresholdPer = config.getInt("solar-farm-analyzer.inspector.alert-threshold-per")
 
-  lazy val snapshotInitialDelay = config.getDuration("solar-farm-analyzer.buffer.snapshot-initial-delay", MILLISECONDS)
-
-  lazy val snapshotInterval = config.getDuration("solar-farm-analyzer.buffer.snapshot-interval", MILLISECONDS)
-
   lazy val ghostCollectionInitialDelay = config.getDuration("solar-farm-analyzer.buffer.ghost-collection-initial-delay", MILLISECONDS)
 
   lazy val ghostCollectionInterval = config.getDuration("solar-farm-analyzer.buffer.ghost-collection-interval", MILLISECONDS)
 
   lazy val ghostLifeSpan = config.getDuration("solar-farm-analyzer.buffer.ghost-life-span", MILLISECONDS)
-
-  lazy val inspectionInitialDelay = config.getDuration("solar-farm-analyzer.inspection.execute-initial-delay", MILLISECONDS)
-
-  lazy val inspectionInterval = config.getDuration("solar-farm-analyzer.inspection.execute-interval", MILLISECONDS)
 
   lazy val analyzerMqttClientId = config.getString("solar-farm-analyzer.mqtt.topic.root")
 

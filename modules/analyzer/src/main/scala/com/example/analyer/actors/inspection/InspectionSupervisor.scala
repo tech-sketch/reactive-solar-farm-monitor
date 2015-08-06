@@ -6,11 +6,7 @@ import com.example.analyer.actors.Channel
 
 import scala.concurrent.duration._
 
-object InspectionSupervisor {
-  def props(receiver: ActorRef) = Props(new InspectionSupervisor(receiver))
-}
-
-class InspectionSupervisor(receiver: ActorRef) extends Actor with ActorLogging {
+class InspectionSupervisor extends Actor with ActorLogging {
 
   override val supervisorStrategy: SupervisorStrategy =
     AllForOneStrategy(maxNrOfRetries = 100, withinTimeRange = 1 minute) {
@@ -19,17 +15,17 @@ class InspectionSupervisor(receiver: ActorRef) extends Actor with ActorLogging {
 
   def receive = Actor.emptyBehavior
 
-  def createCalculationSupervisor =
-    context.actorOf(CalculationSupervisor.props(receiver), "calculation-supervisor")
+  def createCalculationSupervisor() =
+    context.actorOf(Props[CalculationSupervisor], "calculation-supervisor")
 
-  def createInspectionChannel =
-    context.actorOf(Channel.props(createInspectionManager), "inspection-channel")
+  def createInspectionChannel() =
+    context.actorOf(Channel.props(createInspectionManager()), "inspection-channel")
 
-  def createInspectionManager =
+  def createInspectionManager() =
     context.actorOf(Props[InspectionManager], "inspection-manager")
 
   override def preStart() = {
-    createInspectionChannel
-    createCalculationSupervisor
+    createInspectionChannel()
+    createCalculationSupervisor()
   }
 }

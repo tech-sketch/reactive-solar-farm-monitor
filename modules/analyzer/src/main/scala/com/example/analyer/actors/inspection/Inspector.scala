@@ -16,18 +16,16 @@ object Inspector {
   case object Inspecting extends State
 
   sealed trait Data
-  case class Inspection(measurements: Seq[Measurement], owner: ActorRef) extends Data
-  val emptyInspection = Inspection(measurements = Seq(), owner = Actor.noSender)
+  case class Inspection(measurements: Seq[Measurement], owner: ActorRef, receiver: ActorRef) extends Data
+  val emptyInspection = Inspection(measurements = Seq(), owner = Actor.noSender, receiver = Actor.noSender)
 
   case class PartialSum(sum: BigDecimal, population: Int)
   case class Done(population: Int)
-
-  def props(receiver: ActorRef) = Props(new Inspector(receiver))
 }
 
 import Inspector._
 
-class Inspector(receiver: ActorRef) extends LoggingFSM[State, Data] with Stash with Config {
+class Inspector extends LoggingFSM[State, Data] with Stash with Config {
 
   val config = context.system.settings.config
 
@@ -38,8 +36,8 @@ class Inspector(receiver: ActorRef) extends LoggingFSM[State, Data] with Stash w
     case Event(InspectionManager.Sample(measurement), samples: Inspection) =>
       stay() using samples.copy(measurements = samples.measurements :+ measurement)
 
-    case Event(Execute(_), samples: Inspection) =>
-      goto(Inspecting) using samples.copy(owner = sender)
+    case Event(Execute(_, receiver), samples: Inspection) =>
+      goto(Inspecting) using samples.copy(owner = sender, receiver = receiver)
 
     case Event(_: MeanCalculator.Mean, _) | Event(_: MeanCalculator.EmptyMean, _) =>
       stash()
@@ -48,11 +46,11 @@ class Inspector(receiver: ActorRef) extends LoggingFSM[State, Data] with Stash w
 
   when(Inspecting) {
 
-    case Event(MeanCalculator.EmptyMean(population), Inspection(_, owner)) =>
+    case Event(MeanCalculator.EmptyMean(population), Inspection(_, owner, _)) =>
       owner ! Done(population)
       goto(Collecting) using emptyInspection
 
-    case Event(MeanCalculator.Mean(mean, population), Inspection(measurements, owner)) =>
+    case Event(MeanCalculator.Mean(mean, population), Inspection(measurements, owner, receiver)) =>
 
       val lowerLimit = mean * alertThresholdPer / 100
 
