@@ -3,7 +3,7 @@ import sbt.Keys._
 val appName = """reactive-solar-farm-monitor"""
 
 lazy val commonSettings = Seq(
-  version := "0.1.0",
+  version := "0.2.0",
   scalaVersion := "2.11.7"
 )
 
