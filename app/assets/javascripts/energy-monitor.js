@@ -1,13 +1,14 @@
 var Messages = {
     panelId: "パネルID",
     watt: "電力 [W]",
-    measuredTime: "測定時刻"
+    measuredTime: "測定時刻",
+    lowerLimit: "下限 [W]"
 };
 
 window.console = window.console || {
-        log: function () {
+        log: function() {
         },
-        error: function () {
+        error: function() {
         }
     };
 
@@ -15,21 +16,22 @@ window.console = window.console || {
  *  Handsontable : パネル一覧テーブルを作成
  *  Chart.js : （ある一つの）パネルの発電電力推移をグラフとして表示
  */
-var app = angular.module("energy-monitor", ["ngHandsontable", "chart.js"]);
+var app = angular.module("energy-monitor", ["ngHandsontable", "Chart.Scatter.js"]);
 
 /**
  * サーバーとSocket通信をするサービス
  */
-app.service("WebSocketService", ["$http", "$timeout", function ($http, $timeout) {
+app.service("WebSocketService", ["$http", "$timeout", function($http, $timeout) {
         var eventListenerMap = {};
         var Events = {
             ALERT: "alert",
             MEASUREMENT: "measurement",
-            ERROR: "error"
+            ERROR: "error",
+            LOWER_LIMIT: "lowerLimit"
         };
         this.Events = Events;
-        var eventProcessOrder = [Events.ALERT, Events.MEASUREMENT, Events.ERROR];
-        var socket = new WebSocket(document.querySelector("[ng-app=energy-monitor]").getAttribute("data-ws-url"))
+        var eventProcessOrder = [Events.ALERT, Events.MEASUREMENT, Events.LOWER_LIMIT, Events.ERROR];
+        var socket = new WebSocket(document.querySelector("[ng-app=energy-monitor]").getAttribute("data-ws-url"));
 
         /** サーバーからデータを受信した時に呼ばれる関数の登録
          * @param type
@@ -37,22 +39,22 @@ app.service("WebSocketService", ["$http", "$timeout", function ($http, $timeout)
          * @param listener
          * listenerに渡される引数は受け取ったデータ
          */
-        this.addMessageListener = function (type, listener) {
+        this.addMessageListener = function(type, listener) {
             if (!eventListenerMap[type]) eventListenerMap[type] = [];
             eventListenerMap[type].push(listener);
         };
 
-        socket.onopen = function () {
-            console.log("Opning a connection ...")
+        socket.onopen = function() {
+            console.log("Opning a connection ...");
         };
 
-        socket.onmessage = function (event) {
+        socket.onmessage = function(event) {
             // $timeout(fn)は$scope.$apply()の代わり（描画更新用）
-            $timeout(function () {
+            $timeout(function() {
                 var jsonParsed = JSON.parse(event.data);
-                angular.forEach(eventProcessOrder, function (type) {
+                angular.forEach(eventProcessOrder, function(type) {
                     if (jsonParsed[type]) {
-                        angular.forEach(eventListenerMap[type], function (listener, index) {
+                        angular.forEach(eventListenerMap[type], function(listener, index) {
                             listener(jsonParsed[type]);
                         });
                     }
@@ -60,30 +62,29 @@ app.service("WebSocketService", ["$http", "$timeout", function ($http, $timeout)
             });
         };
 
-        socket.onerror = function (event) {
-            console.error("Error: " + event.data)
+        socket.onerror = function(event) {
+            console.error("Error: " + event.data);
         };
 
-        socket.onclose = function () {
-            console.log("Connection closed.")
+        socket.onclose = function() {
+            console.log("Connection closed.");
         };
-
     }]
 );
 
 /**
  * 一覧テーブルに関する処理を行なうサービス
  */
-app.service("MonitorService", ["WebSocketService", function (WebSocketService) {
+app.service("MonitorService", ["WebSocketService", function(WebSocketService) {
         var currentData = [];
 
         var hotInstance = null;
-        this.saveInstance = function (instance) {
+        this.saveInstance = function(instance) {
             hotInstance = instance;
         };
 
         this.selectByScript = false;
-        this.selectRowByPanelId = function (panelId) {
+        this.selectRowByPanelId = function(panelId) {
             for (var rowNumber = 0, len = currentData.length; rowNumber < len; rowNumber++) {
                 if (currentData[rowNumber].panelId === panelId) {
                     this.selectRow(rowNumber);
@@ -91,21 +92,21 @@ app.service("MonitorService", ["WebSocketService", function (WebSocketService) {
                 }
             }
         };
-        this.selectRow = function (rowNumber) {
+        this.selectRow = function(rowNumber) {
             this.selectByScript = true;
             hotInstance.selectCell(rowNumber, 0);
             this.selectByScript = false;
         };
 
-        this.rowNumberToPanelId = function (rowNumber) {
+        this.rowNumberToPanelId = function(rowNumber) {
             return currentData[rowNumber].panelId;
         };
 
         var renderFunction = null;
-        this.setRenderFunction = function (func) {
+        this.setRenderFunction = function(func) {
             renderFunction = func;
         };
-        WebSocketService.addMessageListener(WebSocketService.Events.MEASUREMENT, function (panels) {
+        WebSocketService.addMessageListener(WebSocketService.Events.MEASUREMENT, function(panels) {
             currentData = panels;
             if (renderFunction) {
                 renderFunction(panels);
@@ -142,13 +143,13 @@ app.service("BackendErrorService", ["WebSocketService", function (WebSocketServi
 /**
  * 一覧テーブルを描画するコントローラー
  */
-app.controller("Monitor", ["$scope", "$filter", "MonitorService", "ChartService", function ($scope, $filter, MonitorService, ChartService) {
+app.controller("Monitor", ["$scope", "$filter", "MonitorService", "ChartService", function($scope, $filter, MonitorService, ChartService) {
     $scope.settings = {
 //       disableVisualSelection: ["current", "area"]
         // Handsontableに設定を渡すngHandsontableのlink関数はこの部分より早く呼ばれるので、設定をここで定義しているのでは遅い
         // htmlにsettings="{disableVisualSelection: true, currentRowClassName: "currentRow"}"で書く
 //       currentRowClassName: "currentRow"
-        afterSelectionEnd: function (rowNumStart /*, colNumStart, rowNumEnd, colNumEnd */) {
+        afterSelectionEnd: function(rowNumStart /*, colNumStart, rowNumEnd, colNumEnd */) {
             if (!MonitorService.selectByScript) {
                 var panelId = MonitorService.rowNumberToPanelId(rowNumStart);
                 ChartService.show(panelId);
@@ -162,7 +163,7 @@ app.controller("Monitor", ["$scope", "$filter", "MonitorService", "ChartService"
                 MonitorService.selectRow(rowNumStart);
             }
         },
-        afterLoadData: function () {
+        afterLoadData: function() {
             MonitorService.saveInstance(this);
         }
     };
@@ -172,8 +173,8 @@ app.controller("Monitor", ["$scope", "$filter", "MonitorService", "ChartService"
     var DATE_FORMAT = "HH:mm:ss";
 
     function timeRenderer(instance, td, row, col, prop, value, cellProperties) {
-        arguments[5] = dateFilter(value, DATE_FORMAT);
-        Handsontable.renderers.TextRenderer.apply(this, arguments);
+        value = dateFilter(value, DATE_FORMAT);
+        Handsontable.renderers.TextRenderer.apply(this, [instance, td, row, col, prop, value, cellProperties]);
     }
 
     $scope.columns = [
@@ -199,10 +200,10 @@ app.controller("Monitor", ["$scope", "$filter", "MonitorService", "ChartService"
 
     // テーブルに表示するデータは初回に存在する必要があり、その参照がHandontableに渡る
     $scope.panels = [];
-    MonitorService.setRenderFunction(function (panels) {
+    MonitorService.setRenderFunction(function(panels) {
         // 参照を解除してはならないのでspliceで元の配列への参照は維持
         $scope.panels.splice(0);
-        angular.forEach(panels, function (panel) {
+        angular.forEach(panels, function(panel) {
             $scope.panels.push(panel);
         });
     });
@@ -211,7 +212,7 @@ app.controller("Monitor", ["$scope", "$filter", "MonitorService", "ChartService"
 /**
  * パネルの発電電力推移のグラフに関する処理を行なうサービス
  */
-app.service("ChartService", ["$filter", "WebSocketService", "MonitorService", function ($filter, WebSocketService, MonitorService) {
+app.service("ChartService", ["WebSocketService", "MonitorService", function(WebSocketService, MonitorService) {
         var eventListenerMap = {};
         var Events = {
             SHOW: "show",
@@ -223,41 +224,40 @@ app.service("ChartService", ["$filter", "WebSocketService", "MonitorService", fu
         var targetPanelId = null;
         // 何秒間のデータを表示するか
         var SHOW_CHART_SECOND = 30;
-        // 1秒間を何分割するか（1000の約数以外は動作保証外）
-        var NUMBER_OF_SEPARATE_SECOND = 10;
-        var SHOW_CHART_PERIOD = SHOW_CHART_SECOND * NUMBER_OF_SEPARATE_SECOND;
-        var ONE_PERIOD_MILLI_SECOND = 1000 / NUMBER_OF_SEPARATE_SECOND;
 
-        var dateFilter = $filter("date");
-        var DATE_FORMAT = "HH:mm:ss";
+        var measuredData = [];
+        var lowerLimitData = [];
 
+        var latestTime = null;
 
-        // 線の種類の名前（1種類）
-        var series = [];
-        // x軸（時刻）
-        var labels = [];
-        // y軸（watt）
-        var watts = [];
+        function discardOldData() {
+            var thresholdBeforeTimeDiscard = latestTime - 1000 * SHOW_CHART_SECOND;
+            angular.forEach([measuredData, lowerLimitData], function(data) {
+                for (var j = 0; j < data.length; j++) {
+                    if (data[j].x < thresholdBeforeTimeDiscard) {
+                        data.splice(0, 1);
+                        j--;
+                    } else {
+                        break;
+                    }
+                }
+            });
+        }
 
         var graphAppeared = false;
         var ChartService = this;
-
-        var latestXLabelTime = null;
-        var indexInSecond = 0;
-
-        function pushLabel() {
-            indexInSecond++;
-            if (indexInSecond % NUMBER_OF_SEPARATE_SECOND === 0) {
-                // x軸には1秒間隔の時刻を表示する
-                latestXLabelTime += 1000;
-                labels.push(dateFilter(latestXLabelTime, DATE_FORMAT));
-                indexInSecond = 0;
-            } else {
-                labels.push("");
+        WebSocketService.addMessageListener(WebSocketService.Events.LOWER_LIMIT, function(info) {
+            if (targetPanelId !== null) {
+                latestTime = info.time;
+                lowerLimitData.push({
+                    x: info.detectedDateTime,
+                    y: info.value
+                });
+                discardOldData();
             }
-        }
+        });
 
-        WebSocketService.addMessageListener(WebSocketService.Events.MEASUREMENT, function (panels) {
+        WebSocketService.addMessageListener(WebSocketService.Events.MEASUREMENT, function(panels) {
             if (!graphAppeared && panels.length > 0) {
                 graphAppeared = true;
                 var panelId = panels[0].panelId;
@@ -265,142 +265,169 @@ app.service("ChartService", ["$filter", "WebSocketService", "MonitorService", fu
                 ChartService.show(panelId);
             }
             if (targetPanelId !== null) {
+                var existData = false;
                 for (var i = 0, len = panels.length; i < len; i++) {
                     var panel = panels[i];
                     if (panel.panelId === targetPanelId) {
+                        existData = true;
                         var measuredTime = panel.measuredTime;
-                        if (latestXLabelTime === null) {
-                            // 初回観測時間のミリ秒切り捨て時刻
-                            latestXLabelTime = (measuredTime / 1000 | 0) * 1000;
-                            // pushLabelで+1000されるため
-                            latestXLabelTime -= 1000;
-                        }
-
-                        var diff_ms = measuredTime - (latestXLabelTime + indexInSecond * ONE_PERIOD_MILLI_SECOND);
-                        var diff_period = Math.round(diff_ms / ONE_PERIOD_MILLI_SECOND);
-                        for (var j = 1; j < diff_period; j++) {
-                            pushLabel();
-                            watts.push(null);
-                        }
-                        pushLabel();
-                        watts.push(panel.watt);
-
-                        // 後ろから最大 SHOW_CHART_PERIOD 個だけ残す
-                        labels.splice(0, labels.length - SHOW_CHART_PERIOD);
-                        var destroyedValues = watts.splice(0, watts.length - SHOW_CHART_PERIOD);
-
-                        // y軸付近に空白が発生するのを回避するために補間する
-                        var oldestValue = null;
-                        var oldestValueIndex = 0;
-                        for (var j = 0, len_j = watts.length; j < len_j; j++) {
-                            if (watts[j] !== null) {
-                                oldestValue = watts[j];
-                                oldestValueIndex = j;
-                                break;
-                            }
-                        }
-                        if (oldestValue !== null) {
-                            var latestDestroyedValue = null;
-                            var latestDestroyedValueIndex = null;
-                            for (var j = 0, len_j = destroyedValues.length; j < len_j; j++) {
-                                if (destroyedValues[j] !== null) {
-                                    latestDestroyedValue = destroyedValues[j];
-                                    latestDestroyedValueIndex = j;
-                                }
-                            }
-                            if (latestDestroyedValue !== null) {
-                                var span = destroyedValues.length - latestDestroyedValueIndex + oldestValueIndex;
-                                var interpolatedValue = oldestValue - (oldestValue - latestDestroyedValue) / span * oldestValueIndex;
-                                watts[0] = interpolatedValue;
-                            }
-                        }
-                        // 補間ここまで
-
-                        angular.forEach(eventListenerMap[Events.UPDATE], function (fn, index) {
-                            fn();
+                        latestTime = measuredTime;
+                        measuredData.push({
+                            x: measuredTime,
+                            y: panel.watt
                         });
-                        return;
+                        // 最大で SHOW_CHART_SECOND 秒のデータだけ表示する
+                        discardOldData();
+                        break;
                     }
                 }
-                // データがなかった場合の処理
-                angular.forEach(eventListenerMap[Events.NOT_FOUND], function (fn, index) {
+
+                angular.forEach(eventListenerMap[existData ? Events.UPDATE : Events.NOT_FOUND], function(fn, index) {
                     fn();
                 });
             }
         });
 
-        this.getChartData = function () {
+        this.getChartData = function() {
             // 参照渡しでデータの変更は検知してくれるので、データの受信ごとではなく1回だけの実行でOK
-            var data = [watts];
-            return {
-                series: series,
-                labels: labels,
-                data:data
-            };
+            return [{
+                label: Messages.watt,
+                data: measuredData
+            }, {
+                label: Messages.lowerLimit,
+                strokeColor: "pink",
+                data: lowerLimitData
+            }];
         };
 
-        this.addChartEventListener = function (type, listener) {
+        this.addChartEventListener = function(type, listener) {
             if (!eventListenerMap[type]) eventListenerMap[type] = [];
             eventListenerMap[type].push(listener);
         };
 
-        this.show = function (panelId) {
+        this.show = function(panelId) {
             if (targetPanelId !== panelId) {
                 targetPanelId = panelId;
                 // 保存済みデータの初期化
-                series.splice(0);
-                labels.splice(0);
-                watts.splice(0);
-                latestXLabelTime = null;
+                measuredData.splice(0);
+                lowerLimitData.splice(0);
 
-                series.push(targetPanelId);
-                for (var i = 0; i < SHOW_CHART_PERIOD; i++) {
-                    labels.push("");
-                    watts.push(null);
-                }
-
-                angular.forEach(eventListenerMap[Events.SHOW], function (fn, index) {
+                angular.forEach(eventListenerMap[Events.SHOW], function(fn, index) {
                     fn(targetPanelId);
                 });
             }
         };
+
+// this code from Chart.Scatter.js#1.1.2
+        Chart.ScatterDateScale.prototype._calculateDateScaleRange = function(valueMin, valueMax, drawingSize, fontSize) {
+            // x軸横幅を固定
+            valueMin = valueMax - SHOW_CHART_SECOND * 1000;
+            var units = [
+                // ms単位のメモリが表示されないように単位設定を削除
+                {u: 1000, c: 1, t: 1000, n: 's'},
+                {u: 1000, c: 2, t: 2000, n: 's'},
+                {u: 1000, c: 5, t: 5000, n: 's'},
+                {u: 1000, c: 10, t: 10000, n: 's'},
+                {u: 1000, c: 15, t: 15000, n: 's'},
+                {u: 1000, c: 20, t: 20000, n: 's'},
+                {u: 1000, c: 30, t: 30000, n: 's'},
+                {u: 60000, c: 1, t: 60000, n: 'm'},
+                {u: 60000, c: 2, t: 120000, n: 'm'},
+                {u: 60000, c: 5, t: 300000, n: 'm'},
+                {u: 60000, c: 10, t: 600000, n: 'm'},
+                {u: 60000, c: 15, t: 900000, n: 'm'},
+                {u: 60000, c: 20, t: 1200000, n: 'm'},
+                {u: 60000, c: 30, t: 1800000, n: 'm'},
+                {u: 3600000, c: 1, t: 3600000, n: 'h'},
+                {u: 3600000, c: 2, t: 7200000, n: 'h'},
+                {u: 3600000, c: 3, t: 10800000, n: 'h'},
+                {u: 3600000, c: 4, t: 14400000, n: 'h'},
+                {u: 3600000, c: 6, t: 21600000, n: 'h'},
+                {u: 3600000, c: 8, t: 28800000, n: 'h'},
+                {u: 3600000, c: 12, t: 43200000, n: 'h'},
+                {u: 86400000, c: 1, t: 86400000, n: 'd'},
+                {u: 86400000, c: 2, t: 172800000, n: 'd'},
+                {u: 86400000, c: 4, t: 345600000, n: 'd'},
+                {u: 86400000, c: 5, t: 432000000, n: 'd'},
+                {u: 604800000, c: 1, t: 604800000, n: 'w'}];
+            var maxSteps = drawingSize / (fontSize * 3.3);
+            var valueRange = +valueMax - valueMin,
+                offset = this.useUtc ? 0 : new Date().getTimezoneOffset() * 60000,
+                min = +valueMin - offset,
+                max = +valueMax - offset;
+            var xp = 0, f = [2, 3, 5, 7, 10];
+            while (valueRange / units[xp].t > maxSteps) {
+                xp++;
+                if (xp == units.length) {
+                    var last = units[units.length - 1];
+                    for (var fp = 0; fp < f.length; fp++) {
+                        units.push({
+                            u: last.u,
+                            c: last.c * f[fp],
+                            t: last.c * f[fp] * last.u,
+                            n: last.n
+                        });
+                    }
+                }
+            }
+            var stepValue = units[xp].t,
+                start = Math.floor(min / stepValue) * stepValue,
+                stepCount = Math.ceil((max - start) / stepValue),
+                end = start + stepValue * stepCount;
+            return {
+                min: start + offset,
+                max: end + offset,
+                steps: stepCount,
+                stepValue: stepValue
+            };
+        };
     }]
-);
-
-
-/**
- * Chart.jsの設定
- */
-app.config(["ChartJsProvider", function (ChartJsProvider) {
-    // http://www.chartjs.org/docs/
-    // Configure Line charts
-    ChartJsProvider.setOptions("Line", {
-        scaleBeginAtZero: true,
-        animationSteps: 1,
-        bezierCurve: false,
-        scaleShowVerticalLines: false,
-        scaleShowHorizontalLines: true,
-        showTooltips: false,
-        pointDot: false
-    });
-}]);
+)
+;
 
 /**
  * パネルの発電電力推移のグラフを描画するコントローラー
  */
-app.controller("LineChart", ["$scope", "ChartService", function ($scope, ChartService) {
-    var chartData = ChartService.getChartData();
-    $scope.series = chartData.series;
-    $scope.labels = chartData.labels;
-    $scope.data = chartData.data;
+app.controller("LineChart", ["$scope", "$filter", "ChartService", function($scope, $filter, ChartService) {
+    var numFilter = $filter("number");
+    // カンマ3桁区切り + 小数点以下1桁 形式
+    var fractionSize = 1;
 
-    ChartService.addChartEventListener(ChartService.Events.SHOW, function (targetPanelId) {
+    function tooltipTemplate(valuesObject) {
+        var watt = numFilter(valuesObject.value, fractionSize);
+        var time = valuesObject.argLabel;
+        var datasetLabel = valuesObject.datasetLabel;
+        return datasetLabel + ": " + watt + " (" + time + ")";
+    }
+
+    $scope.data = ChartService.getChartData();
+    $scope.options = {
+        scaleBeginAtZero: true,
+        animationSteps: 1,
+        bezierCurve: false,
+        scaleShowVerticalLines: true,
+        scaleShowHorizontalLines: true,
+        datasetStrokeWidth: 3,
+        scaleType: "date",
+        // x軸メモリ
+        scaleTimeFormat: "HH:MM:ss",
+        // tooltip表示
+        scaleDateTimeFormat: "HH:MM:ss",
+        // ローカル時間を使う
+        useUtc: false,
+        tooltipTemplate: tooltipTemplate,
+        multiTooltipTemplate: tooltipTemplate,
+        pointDot: false,
+//        showTooltips: false
+    };
+
+    ChartService.addChartEventListener(ChartService.Events.SHOW, function(targetPanelId) {
         $scope.title = targetPanelId;
     });
-    ChartService.addChartEventListener(ChartService.Events.UPDATE, function () {
+    ChartService.addChartEventListener(ChartService.Events.UPDATE, function() {
         $scope.nodata = false;
     });
-    ChartService.addChartEventListener(ChartService.Events.NOT_FOUND, function () {
+    ChartService.addChartEventListener(ChartService.Events.NOT_FOUND, function() {
         $scope.nodata = true;
     });
 }]);
@@ -408,14 +435,14 @@ app.controller("LineChart", ["$scope", "ChartService", function ($scope, ChartSe
 /**
  * アラートを描画するコントローラー
  */
-app.controller("AlertNotification", ["$scope", "WebSocketService", "ChartService", "MonitorService", function ($scope, WebSocketService, ChartService, MonitorService) {
+app.controller("AlertNotification", ["$scope", "WebSocketService", "ChartService", "MonitorService", function($scope, WebSocketService, ChartService, MonitorService) {
     $scope.alertCount = 0;
     $scope.alertedPanels = [];
 
-    $scope.showAlertInfo = function () {
+    $scope.showAlertInfo = function() {
         document.getElementById("alert-detail").open();
     };
-    $scope.delete = function (panelId) {
+    $scope.delete = function(panelId) {
         var index = alertedPanelIds.indexOf(panelId);
         if (index !== -1) {
             alertedPanelIds.splice(index, 1);
@@ -423,7 +450,7 @@ app.controller("AlertNotification", ["$scope", "WebSocketService", "ChartService
             refresh();
         }
     };
-    $scope.showChart = function (panelId) {
+    $scope.showChart = function(panelId) {
         MonitorService.selectRowByPanelId(panelId);
         ChartService.show(panelId);
         document.getElementById("alert-detail").close();
@@ -432,8 +459,8 @@ app.controller("AlertNotification", ["$scope", "WebSocketService", "ChartService
 
     var alertedPanelIds = [];
     var alertedPanelInfos = {};
-    WebSocketService.addMessageListener(WebSocketService.Events.ALERT, function (panels) {
-        angular.forEach(panels, function (panel) {
+    WebSocketService.addMessageListener(WebSocketService.Events.ALERT, function(panels) {
+        angular.forEach(panels, function(panel) {
             var panelId = panel.panelId;
             if (alertedPanelIds.indexOf(panelId) === -1) {
                 // 前回は壊れてなかった
@@ -446,7 +473,7 @@ app.controller("AlertNotification", ["$scope", "WebSocketService", "ChartService
             alertedPanelInfos[panelId].measuredTime = panel.measuredTime;
             alertedPanelInfos[panelId].count++;
             // 新しいものが上に来るように
-            alertedPanelIds.sort(function (id_a, id_b) {
+            alertedPanelIds.sort(function(id_a, id_b) {
                 return alertedPanelInfos[id_b].measuredTime - alertedPanelInfos[id_a].measuredTime;
             });
         });
@@ -455,7 +482,7 @@ app.controller("AlertNotification", ["$scope", "WebSocketService", "ChartService
 
     function refresh() {
         var alertedPanels = [];
-        angular.forEach(alertedPanelIds, function (panelId) {
+        angular.forEach(alertedPanelIds, function(panelId) {
             var panelInfo = alertedPanelInfos[panelId];
             alertedPanels.push(panelInfo);
         });

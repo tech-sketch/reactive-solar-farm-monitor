@@ -9,13 +9,22 @@
         firstCreateYear + "-" + nowYear
     }
 }
+@getWebSocketUrl() = @{
+    // sbt -Dws-url="ws://<ip>:<host>/energySocket" run
+    import com.typesafe.config._
+    val config: Config = ConfigFactory.load()
+    if(config.hasPath("ws-url")) {
+        config.getString("ws-url")
+    } else {
+        routes.Application.energySocket().webSocketURL()
+    }
+}
 
 @main("Reactive Solar Farm Monitor") {
     <body
     fullbleed
     unresolved
-    ng-app="energy-monitor"
-    data-ws-url="@routes.Application.energySocket().webSocketURL()">
+    ng-app="energy-monitor" data-ws-url="@getWebSocketUrl()">
         <paper-dialog id="error-dialog" modal ng-controller="ErrorDialog">
             <p><iron-icon icon="error"></iron-icon>{{errorMessage}}</p>
         </paper-dialog>
@@ -77,11 +86,13 @@
                 <div id="line-chart" ng-controller="LineChart">
                     <p class="chart-title">{{title}}</p>
                     <p class="chart-axis-title-y">電力 [W]</p>
-                    <canvas id="line" class="chart chart-line" data="data"
-                    labels="labels" legend="false" series="series"
-                    click="onClick">
+                    <canvas id="line"
+                        class="chart-scatter"
+                        data="data"
+                        options="options">
                     </canvas>
                     <p class="chart-axis-title-x">測定時刻</p>
+                    <div class="legend"></div>
                     <div id="line-chart-nodata-cover" ng-class="{nodata: nodata}">
                         <p>
                             データがありません

@@ -35,6 +35,10 @@ class EnergyApiActor(out: ActorRef, analyzerProxy: ActorRef) extends Actor with 
       val data = Json.arr(Alert(a.panelId, a.measuredValue, a.measuredDateTime, a.detectedDateTime))
       out ! Json.obj("alert" -> data)
 
+    case ll: analysis.api.LowerLimit =>
+      val data = LowerLimit(ll.value, ll.detectedDateTime)
+      out ! Json.obj("lowerLimit" -> data)
+
     case UnreachableAnalyzer =>
       out ! Json.obj("error" -> Error("サーバーで問題が発生しています。しばらくお待ちください。"))
   }
