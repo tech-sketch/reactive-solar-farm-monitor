@@ -17,4 +17,6 @@ package object api {
   case class Snapshot(measurements: Map[PanelId, Measurement])
 
   case class Measurement(panelId: PanelId, measuredValue: BigDecimal, measuredDateTime: DateTime)
+
+  case class LowerLimit(value: BigDecimal, detectedDateTime: DateTime)
 }

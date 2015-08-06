@@ -63,6 +63,10 @@ class AnalyzerProxy extends Actor with LoggingFSM[State, Data] with AppConfig {
       subscribers foreach { _ forward msg }
       stay()
 
+    case Event(msg: analysis.api.LowerLimit, Subscribers(subscribers)) =>
+      subscribers foreach { _ forward msg }
+      stay()
+
     case Event(analysis.api.DoneInspection, _) =>
       setTimer(inspectionRequestTimer,  InspectionRequest, inspectionRequestInterval milliseconds)
       stay()

@@ -17,6 +17,10 @@ object EnergyApi {
   implicit val alertFormat = Json.format[Alert]
   implicit val alertFrameFormatter = FrameFormatter.jsonFrame[Alert]
 
+  case class LowerLimit(value: BigDecimal, detectedDateTime: DateTime)
+  implicit val lowerLimitFormat = Json.format[LowerLimit]
+  implicit val lowerLimitFrameFormatter = FrameFormatter.jsonFrame[LowerLimit]
+
   case class Error(message: String)
   implicit val errorFormat = Json.format[Error]
   implicit val errorFrameFormatter = FrameFormatter.jsonFrame[Error]

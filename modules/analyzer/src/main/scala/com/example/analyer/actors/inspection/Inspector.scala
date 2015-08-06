@@ -2,7 +2,7 @@ package com.example.analyer.actors.inspection
 
 import akka.actor._
 import com.example.analyer.actors.inspection.InspectionManager.Execute
-import com.example.analyer.actors.inspection.MeanCalculator.EmptyMean
+import com.example.analyer.actors.inspection.LowerLimitCalculator.EmptyLowerLimit
 import com.example.farm.api.Measurement
 import com.example.{Config, analysis}
 import org.joda.time.DateTime
@@ -25,9 +25,7 @@ object Inspector {
 
 import Inspector._
 
-class Inspector extends LoggingFSM[State, Data] with Stash with Config {
-
-  val config = context.system.settings.config
+class Inspector extends LoggingFSM[State, Data] with Stash {
 
   startWith(Collecting, emptyInspection)
 
@@ -39,20 +37,18 @@ class Inspector extends LoggingFSM[State, Data] with Stash with Config {
     case Event(Execute(_, receiver), samples: Inspection) =>
       goto(Inspecting) using samples.copy(owner = sender, receiver = receiver)
 
-    case Event(_: MeanCalculator.Mean, _) | Event(_: MeanCalculator.EmptyMean, _) =>
+    case Event(_: LowerLimitCalculator.LowerLimit, _) | Event(_: LowerLimitCalculator.EmptyLowerLimit, _) =>
       stash()
       stay()
   }
 
   when(Inspecting) {
 
-    case Event(MeanCalculator.EmptyMean(population), Inspection(_, owner, _)) =>
+    case Event(LowerLimitCalculator.EmptyLowerLimit(population), Inspection(_, owner, _)) =>
       owner ! Done(population)
       goto(Collecting) using emptyInspection
 
-    case Event(MeanCalculator.Mean(mean, population), Inspection(measurements, owner, receiver)) =>
-
-      val lowerLimit = mean * alertThresholdPer / 100
+    case Event(LowerLimitCalculator.LowerLimit(lowerLimit, population), Inspection(measurements, owner, receiver)) =>
 
       import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -60,7 +56,7 @@ class Inspector extends LoggingFSM[State, Data] with Stash with Config {
         measurements map { m =>
           Future {
             if (m.measuredValue < lowerLimit) {
-              log.info(s"Alert: panelId ${m.panelId},  measuredDateTime ${m.measuredDateTime}, measuredValue ${m.measuredValue}, mean ${mean}, population ${population}")
+              log.info(s"Alert: panelId ${m.panelId},  measuredDateTime ${m.measuredDateTime}, measuredValue ${m.measuredValue}, lowerLimit ${lowerLimit}, population ${population}")
               receiver ! analysis.api.Alert(m.panelId, DateTime.now(), m.measuredValue, m.measuredDateTime)
             }
           }

@@ -2,7 +2,7 @@ package com.example.analyzer
 
 import com.example.analyer.actors.inspection.InspectionManager.{Execute, Sample}
 import com.example.analyer.actors.inspection.Inspector.Done
-import com.example.analyer.actors.inspection.MeanCalculator.Mean
+import com.example.analyer.actors.inspection.LowerLimitCalculator.LowerLimit
 import com.example.analyer.actors.inspection.SumCalculator.PartialSum
 import org.specs2.mutable._
 
@@ -67,7 +67,7 @@ class InspectionSpec extends Specification with Akka {
       _inspector.expectMsgType[Sample].measurement must be_==(measurement)
     }
 
-    "定期的に Execute が SumCalculator MeanCalculator Inspector に送られる" >> new AkkaTestkitWith(ActorSystem("test", config = Some(ConfigFactory.parseString(
+    "定期的に Execute が SumCalculator LowerLimitCalculator Inspector に送られる" >> new AkkaTestkitWith(ActorSystem("test", config = Some(ConfigFactory.parseString(
       """
         |inspector.alert-threshold-per = 75
         |solar-farm-analyzer.inspection.execute-initial-delay = 100 milliseconds
@@ -119,7 +119,7 @@ class InspectionSpec extends Specification with Akka {
   }
 
   "SumCalculator" >> {
-    "Execute を受信したときにサンプルの合計値を MeanCalculator に送る" >> new AkkaTestkit {
+    "Execute を受信したときにサンプルの合計値を LowerLimitCalculator に送る" >> new AkkaTestkit {
       val meanCalculator = TestProbe()
 
       val sumCalculator =
@@ -138,18 +138,18 @@ class InspectionSpec extends Specification with Akka {
     }
   }
 
-  "MeanCalculator" >> {
-    "PartialSum が Execute で指定されたサンプル数分集まったら Mean を Inspector に送る" >> new AkkaTestkit {
+  "LowerLimitCalculator" >> {
+    "PartialSum が Execute で指定されたサンプル数分集まったら LowerLimit を Inspector に送る" >> new AkkaTestkit {
       val inspector = TestProbe()
 
       val meanCalculator =
-        system.actorOf(MeanCalculator.props(inspector.ref))
+        system.actorOf(LowerLimitCalculator.props(inspector.ref))
 
       meanCalculator ! Execute(3, TestProbe().ref)
       meanCalculator ! PartialSum(BigDecimal(7), 1)
       meanCalculator ! PartialSum(BigDecimal(11), 2)
 
-      val Mean(mean, population) = inspector.expectMsgType[Mean]
+      val LowerLimit(mean, population) = inspector.expectMsgType[LowerLimit]
 
       population must be_==(3)
       mean must be_==(BigDecimal(6))
@@ -157,7 +157,7 @@ class InspectionSpec extends Specification with Akka {
   }
 
   "Inspector" >> {
-    "受信した Mean から設定した下限値より下回る Sample がある場合 Alert を receiver に送る" >> new AkkaTestkitWith(ActorSystem("test", config = Some(ConfigFactory.parseString(
+    "受信した LowerLimit から設定した下限値より下回る Sample がある場合 Alert を receiver に送る" >> new AkkaTestkitWith(ActorSystem("test", config = Some(ConfigFactory.parseString(
       """
         |solar-farm-analyzer.inspector.alert-threshold-per = 72
       """.stripMargin)))) {
@@ -177,7 +177,7 @@ class InspectionSpec extends Specification with Akka {
 
       inspector ! Execute(3, TestProbe().ref)
 
-      inspector ! Mean(BigDecimal(14), 3)
+      inspector ! LowerLimit(BigDecimal(14), 3)
 
       val alert = receiver.expectMsgType[Alert]
 
@@ -187,13 +187,13 @@ class InspectionSpec extends Specification with Akka {
     }.pendingUntilFixed("は未修正")
   }
 
-  "SumCalculator -> MeanCalculator" >> {
-    "MeanCalculator へ Execute が届く前に SumCalculator が PartialSum を送っても Mean が計算できる" >> new AkkaTestkit {
+  "SumCalculator -> LowerLimitCalculator" >> {
+    "LowerLimitCalculator へ Execute が届く前に SumCalculator が PartialSum を送っても LowerLimit が計算できる" >> new AkkaTestkit {
 
       val inspector = TestProbe()
 
       val meanCalculator =
-        system.actorOf(MeanCalculator.props(inspector.ref), "mean")
+        system.actorOf(LowerLimitCalculator.props(inspector.ref), "mean")
       val sumCalculator =
         system.actorOf(SumCalculator.props(meanCalculator), "sum")
 
@@ -206,12 +206,12 @@ class InspectionSpec extends Specification with Akka {
 
       meanCalculator ! Execute(2, TestProbe().ref)
 
-      inspector.expectMsgType[Mean] must not beNull
+      inspector.expectMsgType[LowerLimit] must not beNull
     }
   }
 
-  "MeanCalculator -> Inspector" >> {
-    "Inspector へ Execute が届く前に MeanCalculator が Mean を送っても Alert を発報できる" >> new AkkaTestkitWith(ActorSystem("test", config = Some(ConfigFactory.parseString(
+  "LowerLimitCalculator -> Inspector" >> {
+    "Inspector へ Execute が届く前に LowerLimitCalculator が LowerLimit を送っても Alert を発報できる" >> new AkkaTestkitWith(ActorSystem("test", config = Some(ConfigFactory.parseString(
       """
         |solar-farm-analyzer.inspector.alert-threshold-per = 90
       """.stripMargin)))) {
@@ -220,7 +220,7 @@ class InspectionSpec extends Specification with Akka {
       val inspector =
         system.actorOf(Props[Inspector])
       val meanCalculator =
-        system.actorOf(MeanCalculator.props(inspector))
+        system.actorOf(LowerLimitCalculator.props(inspector))
 
       import farm.api.Measurement
       inspector ! Sample(Measurement("test1", BigDecimal(7), DateTime.now()))

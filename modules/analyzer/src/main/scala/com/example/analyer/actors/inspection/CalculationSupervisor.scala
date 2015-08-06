@@ -18,7 +18,7 @@ class CalculationSupervisor extends Actor with ActorLogging {
     context.actorOf(SumCalculator.props(createMeanCalculator()), "sum-calculator")
 
   def createMeanCalculator() =
-    context.actorOf(MeanCalculator.props(createInspector()), "mean-calculator")
+    context.actorOf(LowerLimitCalculator.props(createInspector()), "mean-calculator")
 
   def createInspector() =
     context.actorOf(Props[Inspector], "inspector")
