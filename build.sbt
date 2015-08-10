@@ -52,7 +52,10 @@ lazy val analysisApi = (project in file("modules/analysis-api")).
     libraryDependencies += json
   )
 
-lazy val runSub = taskKey[Unit]("")
+lazy val runNode1 = taskKey[Unit]("")
+lazy val runNode2 = taskKey[Unit]("")
+lazy val runNode3 = taskKey[Unit]("")
+lazy val runNode4 = taskKey[Unit]("")
 
 lazy val analyzer = (project in file("modules/analyzer")).
   enablePlugins(JavaAppPackaging).
@@ -65,8 +68,11 @@ lazy val analyzer = (project in file("modules/analyzer")).
       specs2 % Test
     ) ++ akkaDependencies ++ mqttDependencies,
     mainClass := Some("com.example.analyer.Analyzer"),
-    fullRunInputTask(run, Compile, "com.example.analyer.Analyzer", "--port:2551", "--seed-nodes:127.0.0.1:2551,127.0.0.1:2552"),
-    fullRunTask(runSub, Compile, "com.example.analyer.Analyzer", "--port:2552", "--seed-nodes:127.0.0.1:2551,127.0.0.1:2552"),
+    fullRunInputTask(run, Compile, "com.example.analyzer.Analyzer"),
+    fullRunTask(runNode1, Compile, "com.example.analyzer.Analyzer", "--host:127.0.0.1", "--port:2551", "--seed-nodes:127.0.0.1:2550,127.0.0.1:2551"),
+    fullRunTask(runNode2, Compile, "com.example.analyzer.Analyzer", "--host:127.0.0.1", "--port:2552", "--seed-nodes:127.0.0.1:2550,127.0.0.1:2551"),
+    fullRunTask(runNode3, Compile, "com.example.analyzer.Analyzer", "--host:127.0.0.1", "--port:2553", "--seed-nodes:127.0.0.1:2550,127.0.0.1:2551"),
+    fullRunTask(runNode4, Compile, "com.example.analyzer.Analyzer", "--host:127.0.0.1", "--port:2554", "--seed-nodes:127.0.0.1:2550,127.0.0.1:2551"),
     dockerExposedPorts := Seq(2551),
     dockerEntrypoint := Seq("/bin/sh", "-c",
       "HOST_IP=`ip addr show scope global | grep 'inet' | grep -Eo '[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+'`"

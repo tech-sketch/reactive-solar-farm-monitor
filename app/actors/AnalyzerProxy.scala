@@ -1,32 +1,36 @@
 package actors
 
 import akka.actor._
-import akka.cluster.Cluster
-import akka.contrib.pattern.ClusterClient
-import akka.remote._
+import akka.cluster.{MemberStatus, Cluster}
+import akka.cluster.ClusterEvent._
 import com.example.analysis
 import config.AppConfig
 
 import scala.concurrent.duration._
-import scala.collection.JavaConversions._
+import scala.util.Random
 
 object AnalyzerProxy {
 
   sealed trait State
-  case object Init extends State
-  case object Stable extends State
-  case object Unstable extends State
+  case object Unreachable extends State
+  case object Reachable extends State
 
   sealed trait Data
-  case class ProxyData(subscribers: Set[ActorRef], associated: Set[Address]) extends Data
-  val emptySubscribers = ProxyData(subscribers = Set(), associated = Set())
+  case class ProxyData(subscribers: Set[ActorRef], analyzerNodeAddresses: Set[Address]) extends Data {
+    def electAnalysisProxyPath(): ActorPath = {
+      val nodeAddress = analyzerNodeAddresses.toIndexedSeq(Random.nextInt(analyzerNodeAddresses.size))
+      RootActorPath(nodeAddress) / "user" / "analysis-proxy"
+    }
+  }
+
+  val emptySubscribers = ProxyData(subscribers = Set(), analyzerNodeAddresses = Set())
 
   val inspectionRequestTimer = "inspection-request-timer"
   val inspectionResponseTimeoutTimer = "inspection-response-timeout-timer"
   val measurementRequestTimer = "measurement-request-timer"
   val measurementResponseTimeoutTimer = "measurement-response-timeout-timer"
   val connectionAttemptTimer = "connection-attempt-timer"
-  val unstableTimeoutTimer = "connection-attempt-timeout-timer"
+  val unreachableTimeoutTimer = "connection-attempt-timeout-timer"
   val errorNotificationTimer = "error-notification-timer"
 
   case class Subscribe()
@@ -35,7 +39,7 @@ object AnalyzerProxy {
   case class MeasurementRequest()
   case class MeasurementResponseTimeout()
   case class UnreachableAnalyzer()
-  case class UnstableTimeout()
+  case class UnreachableTimeout()
 
   case class CannotConnectAnalyzerException() extends IllegalStateException
 }
@@ -46,46 +50,12 @@ class AnalyzerProxy extends Actor with LoggingFSM[State, Data] with AppConfig {
 
   val config = context.system.settings.config
 
-  val initialContacts = contactPoints.map {
-    case AddressFromURIString(address) =>
-      context.actorSelection(RootActorPath(address) / "user" / "receptionist")
-  }.toSet
+  Cluster(context.system).subscribe(self, classOf[MemberEvent])
 
-  val clusterClient = context.actorOf(ClusterClient.props(initialContacts), "cluster-client")
+  startWith(Unreachable, emptySubscribers)
 
-  context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
 
-  startWith(Init, emptySubscribers)
-
-  when(Init, stateTimeout = initialConnectionAttemptTimeout milliseconds) {
-
-    case Event(StateTimeout, _) =>
-      goto(Unstable)
-  }
-
-  when(Stable) {
-
-    case Event(analysis.api.DoneInspection, _) =>
-      cancelTimer(inspectionResponseTimeoutTimer)
-      setTimer(inspectionRequestTimer,  InspectionRequest, inspectionRequestInterval milliseconds)
-      stay()
-
-    case Event(msg: analysis.api.Snapshot, ProxyData(subscribers, _)) =>
-      cancelTimer(measurementResponseTimeoutTimer)
-      setTimer(measurementRequestTimer,  MeasurementRequest, measurementRequestInterval milliseconds)
-      subscribers foreach { _ forward msg }
-      stay()
-
-    case Event(msg: analysis.api.LowerLimit, ProxyData(subscribers, _)) =>
-      subscribers foreach { _ forward msg }
-      stay()
-
-    case Event(msg: analysis.api.Alert, ProxyData(subscribers, _)) =>
-      subscribers foreach { _ forward msg }
-      stay()
-  }
-
-  when(Unstable) {
+  when(Unreachable, stateTimeout = unreachableTimeoutDuration milliseconds) {
 
     case Event(UnreachableAnalyzer, ProxyData(subscribers, associated)) =>
       if (associated.isEmpty) {
@@ -93,59 +63,85 @@ class AnalyzerProxy extends Actor with LoggingFSM[State, Data] with AppConfig {
       }
       stay()
 
-    case Event(`unstableTimeoutDuration`, _) =>
+    case Event(UnreachableTimeout | StateTimeout, _) =>
       throw new CannotConnectAnalyzerException
   }
 
-  whenUnhandled {
+  when(Reachable) {
 
-    case Event(InspectionRequest, _) =>
-      clusterClient ! ClusterClient.Send("/user/analysis-supervisor/inspection-supervisor/inspection-manager", analysis.api.InspectionRequest, false)
-      setTimer(inspectionResponseTimeoutTimer, InspectionResponseTimeout, inspectionResponseTimeoutDuration milliseconds)
-      stay()
-
-    case Event(InspectionResponseTimeout, _) =>
-      self ! InspectionRequest
-      goto(Unstable)
-
-    case Event(MeasurementRequest, _) =>
-      clusterClient ! ClusterClient.Send("/user/analysis-supervisor/buffer", analysis.api.MeasurementRequest, false)
+    case Event(MeasurementRequest, data: ProxyData) =>
+      context.actorSelection(data.electAnalysisProxyPath()) ! analysis.api.MeasurementRequest
       setTimer(measurementResponseTimeoutTimer, MeasurementResponseTimeout, measurementResponseTimeoutDuration milliseconds)
       stay()
 
     case Event(MeasurementResponseTimeout, _) =>
       self ! MeasurementRequest
-      goto(Unstable)
+      stay()
+
+    case Event(InspectionRequest, data: ProxyData) =>
+      context.actorSelection(data.electAnalysisProxyPath()) ! analysis.api.InspectionRequest
+      setTimer(inspectionResponseTimeoutTimer, InspectionResponseTimeout, inspectionResponseTimeoutDuration milliseconds)
+      stay()
+
+    case Event(InspectionResponseTimeout, _) =>
+      self ! InspectionRequest
+      stay()
 
     case Event(analysis.api.DoneInspection, _) =>
       cancelTimer(inspectionResponseTimeoutTimer)
       setTimer(inspectionRequestTimer,  InspectionRequest, inspectionRequestInterval milliseconds)
-      goto(Stable)
+      stay()
 
     case Event(msg: analysis.api.Snapshot, ProxyData(subscribers, _)) =>
       cancelTimer(measurementResponseTimeoutTimer)
       setTimer(measurementRequestTimer,  MeasurementRequest, measurementRequestInterval milliseconds)
-      goto(Stable)
-
-    case Event(msg: analysis.api.Alert, ProxyData(subscribers, _)) =>
-      goto(Stable)
+      subscribers foreach { _ forward msg }
+      stay()
 
     case Event(msg: analysis.api.LowerLimit, ProxyData(subscribers, _)) =>
-      goto(Stable)
+      subscribers foreach { _ forward msg }
+      stay()
 
-    case Event(e @ AssociatedEvent(_, remoteAddress, false), data: ProxyData) =>
-      log.info(e.toString)
-      log.info(data.toString)
-      stay() using data.copy(associated = data.associated + remoteAddress)
+    case Event(msg: analysis.api.Alert, ProxyData(subscribers, _)) =>
+      subscribers foreach { _ forward msg }
+      stay()
+  }
 
-    case Event(e @ DisassociatedEvent(_, remoteAddress, false), data: ProxyData) =>
-      log.info(e.toString)
-      log.info(data.toString)
-      goto(Unstable) using data.copy(associated = data.associated - remoteAddress)
+  whenUnhandled {
 
-    case Event(error: AssociationErrorEvent, _) =>
-      log.error(error.cause, "Error detected in Remote Analyzer")
-      goto(Unstable)
+    /* Cluster Events */
+
+    case Event(current: CurrentClusterState, data: ProxyData) =>
+      val currentNodeAddresses =
+        current.members.collect {
+          case m if m.hasRole("analyzer") && m.status == MemberStatus.Up => m.address
+        }
+      log.info("Analyzer Nodes: " + currentNodeAddresses)
+      if (currentNodeAddresses.isEmpty) {
+        goto(Unreachable)
+      } else {
+        goto(Reachable) using data.copy(analyzerNodeAddresses = data.analyzerNodeAddresses ++ currentNodeAddresses)
+      }
+
+    case Event(MemberUp(m), data: ProxyData) if m.hasRole(analyzerClusterRole) =>
+      val newData = data.copy(analyzerNodeAddresses = data.analyzerNodeAddresses + m.address)
+      log.info("Analyzer Nodes: " + newData.analyzerNodeAddresses)
+      goto(Reachable) using newData
+
+    case Event(MemberRemoved(m, _), data: ProxyData) if m.hasRole(analyzerClusterRole) =>
+      val newData = data.copy(analyzerNodeAddresses = data.analyzerNodeAddresses - m.address)
+      log.info("Analyzer Nodes: " + newData.analyzerNodeAddresses)
+
+      if (newData.analyzerNodeAddresses.isEmpty) {
+        goto(Unreachable) using newData
+      } else {
+        goto(Reachable) using newData
+      }
+
+    case Event(_: MemberEvent, _) =>
+      stay()
+
+    /* Subscriber Events */
 
     case Event(Subscribe, data @ ProxyData(subscribers, _)) =>
       val subscriber = sender
@@ -156,20 +152,17 @@ class AnalyzerProxy extends Actor with LoggingFSM[State, Data] with AppConfig {
       stay() using data.copy(subscribers = subscribers - subscriber)
   }
 
-  override def preStart() = {
-    self ! InspectionRequest
-    self ! MeasurementRequest
-  }
-
   onTransition {
 
-    case _ -> Unstable =>
+    case _ -> Unreachable =>
       setTimer(errorNotificationTimer, UnreachableAnalyzer, errorNotificationInterval milliseconds, repeat = true)
-      setTimer(unstableTimeoutTimer, UnstableTimeout, unstableTimeoutDuration milliseconds)
+      setTimer(unreachableTimeoutTimer, UnreachableTimeout, unreachableTimeoutDuration milliseconds)
 
-    case Unstable -> Stable =>
+    case Unreachable -> Reachable =>
+      self ! InspectionRequest
+      self ! MeasurementRequest
       cancelTimer(errorNotificationTimer)
-      cancelTimer(unstableTimeoutTimer)
+      cancelTimer(unreachableTimeoutTimer)
   }
 
   initialize()

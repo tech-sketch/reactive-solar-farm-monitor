@@ -2,8 +2,8 @@ package com.example.analyzer
 
 import akka.actor.ActorSystem
 import akka.testkit._
-import com.example.analyer.actors.Buffer
-import com.example.analyer.actors.Channel._
+import com.example.analyzer.actors.Buffer
+import com.example.analyzer.actors.Channel._
 import com.example.testkit.Akka
 import com.typesafe.config.ConfigFactory
 import com.example.farm

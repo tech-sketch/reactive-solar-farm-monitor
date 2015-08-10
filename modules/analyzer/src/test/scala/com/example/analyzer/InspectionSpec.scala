@@ -1,16 +1,16 @@
 package com.example.analyzer
 
-import com.example.analyer.actors.inspection.InspectionManager.{Execute, Sample}
-import com.example.analyer.actors.inspection.Inspector.Done
-import com.example.analyer.actors.inspection.LowerLimitCalculator.LowerLimit
-import com.example.analyer.actors.inspection.SumCalculator.PartialSum
+import com.example.analyzer.actors.inspection.InspectionManager.{Execute, Sample}
+import com.example.analyzer.actors.inspection.Inspector.Done
+import com.example.analyzer.actors.inspection.LowerLimitCalculator.LowerLimit
+import com.example.analyzer.actors.inspection.SumCalculator.PartialSum
 import org.specs2.mutable._
 
 import akka.actor._
 import akka.testkit._
-import com.example.analyer.actors.{AnalysisSupervisor, Buffer}
-import com.example.analyer.actors.Channel.Packet
-import com.example.analyer.actors.inspection._
+import com.example.analyzer.actors.{AnalysisSupervisor, Buffer}
+import com.example.analyzer.actors.Channel.Packet
+import com.example.analyzer.actors.inspection._
 import com.example.testkit._
 import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
@@ -33,9 +33,9 @@ class InspectionSpec extends Specification with Akka {
       val inspectorProbe = TestProbe()
 
       val inspectionManager = TestFSMRef(new InspectionManager {
-        override val sumCalculator = context.actorSelection(sumCalculatorProbe.ref.path)
-        override val meanCalculator = context.actorSelection(meanCalculatorProbe.ref.path)
-        override val inspector = context.actorSelection(inspectorProbe.ref.path)
+        override val sumCalculatorRouter = context.actorSelection(sumCalculatorProbe.ref.path)
+        override val lowerLimitCalculator = context.actorSelection(meanCalculatorProbe.ref.path)
+        override val inspectorRouter = context.actorSelection(inspectorProbe.ref.path)
       })
 
       val nowTime = DateTime.now()
@@ -53,9 +53,9 @@ class InspectionSpec extends Specification with Akka {
       val _inspector = TestProbe()
 
       val inspectionManager = TestFSMRef(new InspectionManager {
-        override val sumCalculator = context.actorSelection(_sumCalculator.ref.path)
-        override val meanCalculator = context.actorSelection(_meanCalculator.ref.path)
-        override val inspector = context.actorSelection(_inspector.ref.path)
+        override val sumCalculatorRouter = context.actorSelection(_sumCalculator.ref.path)
+        override val lowerLimitCalculator = context.actorSelection(_meanCalculator.ref.path)
+        override val inspectorRouter = context.actorSelection(_inspector.ref.path)
       })
 
       val nowTime = DateTime.now()
@@ -79,9 +79,9 @@ class InspectionSpec extends Specification with Akka {
       val _inspector = TestProbe()
 
       val inspectionManager = TestFSMRef(new InspectionManager {
-        override val sumCalculator = context.actorSelection(_sumCalculator.ref.path)
-        override val meanCalculator = context.actorSelection(_meanCalculator.ref.path)
-        override val inspector = context.actorSelection(_inspector.ref.path)
+        override val sumCalculatorRouter = context.actorSelection(_sumCalculator.ref.path)
+        override val lowerLimitCalculator = context.actorSelection(_meanCalculator.ref.path)
+        override val inspectorRouter = context.actorSelection(_inspector.ref.path)
       })
 
       within(150 milliseconds) {
@@ -103,9 +103,9 @@ class InspectionSpec extends Specification with Akka {
     "Inspecting のときに全サンプル分の Done を受信すると Collecting になる" >> new AkkaTestkit {
 
       val inspectionManager = TestFSMRef(new InspectionManager {
-        override val sumCalculator = context.actorSelection(TestProbe().ref.path)
-        override val meanCalculator = context.actorSelection(TestProbe().ref.path)
-        override val inspector = context.actorSelection(TestProbe().ref.path)
+        override val sumCalculatorRouter = context.actorSelection(TestProbe().ref.path)
+        override val lowerLimitCalculator = context.actorSelection(TestProbe().ref.path)
+        override val inspectorRouter = context.actorSelection(TestProbe().ref.path)
       })
       inspectionManager.setState(Inspecting, Inspection(0, 10, TestProbe().ref))
 

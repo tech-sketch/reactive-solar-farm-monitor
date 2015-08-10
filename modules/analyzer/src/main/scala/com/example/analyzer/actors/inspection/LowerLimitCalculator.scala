@@ -1,11 +1,14 @@
-package com.example.analyer.actors.inspection
+package com.example.analyzer.actors.inspection
 
 import akka.actor._
 import akka.routing.Broadcast
+import akka.routing.ConsistentHashingRouter.ConsistentHashable
 import com.example.{analysis, Config}
-import com.example.analyer.actors.inspection.InspectionManager.Execute
-import com.example.analyer.actors.inspection.SumCalculator.PartialSum
+import com.example.analyzer.actors.inspection.InspectionManager.{AbortInspection, Execute}
+import com.example.analyzer.actors.inspection.SumCalculator.PartialSum
 import org.joda.time.DateTime
+
+import scala.math.BigDecimal.RoundingMode
 
 object LowerLimitCalculator {
 
@@ -23,12 +26,12 @@ object LowerLimitCalculator {
   case class ExecuteContext(population: Int) extends Data
   case class LowerLimitCalculation(sum: BigDecimal, preparedPopulation:Int, totalPopulation: Int, receiver: ActorRef) extends Data
 
-  def props(inspector: ActorRef) = Props(new LowerLimitCalculator(inspector))
+  def props(inspectorRouter: ActorRef) = Props(new LowerLimitCalculator(inspectorRouter))
 }
 
 import LowerLimitCalculator._
 
-class LowerLimitCalculator(inspector: ActorRef) extends LoggingFSM[State, Data] with Stash with Config {
+class LowerLimitCalculator(inspectorRouter: ActorRef) extends LoggingFSM[State, Data] with Stash with Config {
 
   val config = context.system.settings.config
 
@@ -54,10 +57,12 @@ class LowerLimitCalculator(inspector: ActorRef) extends LoggingFSM[State, Data] 
         if (population > 0) {
           val mean = sum / BigDecimal(population)
           val lowerLimit = mean * alertThresholdPer / 100
-          inspector ! LowerLimit(lowerLimit, population)
+          inspectorRouter ! Broadcast(LowerLimit(lowerLimit, population))
+
+          log.debug("LowerLimit: {}, population {}", lowerLimit.setScale(2, RoundingMode.HALF_DOWN), population)
           c.receiver ! analysis.api.LowerLimit(lowerLimit, DateTime.now())
         } else {
-          inspector ! EmptyLowerLimit(population)
+          inspectorRouter ! Broadcast(EmptyLowerLimit(population))
         }
         goto(Pending) using Empty()
       } else if (population < c.totalPopulation) {
@@ -65,6 +70,11 @@ class LowerLimitCalculator(inspector: ActorRef) extends LoggingFSM[State, Data] 
       } else {
         throw new IllegalPopulationException(s"Total population: ${c.totalPopulation}, Collected population: ${population}")
       }
+  }
+
+  whenUnhandled {
+    case Event(AbortInspection, _) =>
+      goto(Pending) using Empty()
   }
 
   onTransition {

@@ -4,7 +4,7 @@
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
-      <pattern>%date{HH:mm:ss.SSS} %highlight(%5level) %cyan([%4.-4logger]) %message%n%xException{short}</pattern>
+      <pattern>%date{HH:mm:ss.SSS} %highlight(%5level) %cyan([%logger{10}]) %message%n%xException{short}</pattern>
     </encoder>
   </appender>
 
@@ -12,9 +12,11 @@
     The logger name is typically the Java/Scala package name.
     This configures the log level to log at for a package and its children packages.
   -->
-  <logger name="akka" level="INFO" />
+  <logger name="com.example" level="DEBUG">
+    <appender-ref ref="STDOUT" />
+  </logger>
 
-  <root level="INFO">
+  <root level="WARN">
     <appender-ref ref="STDOUT" />
   </root>
 
