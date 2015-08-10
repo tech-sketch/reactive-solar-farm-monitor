@@ -4,7 +4,8 @@ val appName = """reactive-solar-farm-monitor"""
 
 lazy val commonSettings = Seq(
   version := "0.2.0",
-  scalaVersion := "2.11.7"
+  scalaVersion := "2.11.7",
+  resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 )
 
 lazy val dockerCommonSettings = Seq(
@@ -17,7 +18,6 @@ lazy val root = (project in file(".")).
   settings(dockerCommonSettings: _*).
   settings(
     name := appName,
-    resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
     libraryDependencies ++= Seq(
         jdbc,
         cache,
