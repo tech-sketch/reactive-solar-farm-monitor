@@ -5,6 +5,7 @@ val appName = """reactive-solar-farm-monitor"""
 lazy val commonSettings = Seq(
   version := "0.2.0",
   scalaVersion := "2.11.7",
+  // Specs2 dependes on bintray repository of Scalaz.
   resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 )
 
