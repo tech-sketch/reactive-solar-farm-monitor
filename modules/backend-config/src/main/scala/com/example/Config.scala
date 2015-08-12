@@ -6,6 +6,12 @@ trait Config {
 
   val config: com.typesafe.config.Config
 
+  // Akka
+
+  lazy val akkaRemoteHostname = optionConfig("akka.remote.netty.tcp.hostname", _.getString)
+
+  lazy val akkaRemotePort = optionConfig("akka.remote.netty.tcp.port", _.getInt)
+
   // MQTT
 
   lazy val mqttBrokerHostname = config.getString("mqtt.broker.hostname")
@@ -42,6 +48,8 @@ trait Config {
 
   // Analyzer
 
+  lazy val analyzerClusterName = config.getString("solar-farm-analyzer.cluster.name")
+
   lazy val alertThresholdPer = config.getInt("solar-farm-analyzer.inspector.alert-threshold-per")
 
   lazy val ghostCollectionInitialDelay = config.getDuration("solar-farm-analyzer.buffer.ghost-collection-initial-delay", MILLISECONDS)
@@ -50,7 +58,7 @@ trait Config {
 
   lazy val ghostLifeSpan = config.getDuration("solar-farm-analyzer.buffer.ghost-life-span", MILLISECONDS)
 
-  lazy val analyzerMqttClientId = config.getString("solar-farm-analyzer.mqtt.topic.root")
+  lazy val analyzerMqttClientId = config.getString("solar-farm-analyzer.mqtt.client.id-prefix")
 
   lazy val analyzerMqttTopicRoot = config.getString("solar-farm-simulator.mqtt.topic.root")
 

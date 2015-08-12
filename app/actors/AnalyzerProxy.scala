@@ -1,35 +1,41 @@
 package actors
 
 import akka.actor._
+import akka.cluster.Cluster
+import akka.contrib.pattern.ClusterClient
 import akka.remote._
 import com.example.analysis
 import config.AppConfig
 
 import scala.concurrent.duration._
+import scala.collection.JavaConversions._
 
 object AnalyzerProxy {
 
   sealed trait State
-  case object Unreachable extends State
-  case object Reachable extends State
-  case object AttemptingConnect extends State
+  case object Init extends State
+  case object Stable extends State
+  case object Unstable extends State
 
   sealed trait Data
-  case class Subscribers(subscribers: Set[ActorRef]) extends Data
-  val emptySubscribers = Subscribers(subscribers = Set())
+  case class ProxyData(subscribers: Set[ActorRef], associated: Set[Address]) extends Data
+  val emptySubscribers = ProxyData(subscribers = Set(), associated = Set())
 
   val inspectionRequestTimer = "inspection-request-timer"
+  val inspectionResponseTimeoutTimer = "inspection-response-timeout-timer"
   val measurementRequestTimer = "measurement-request-timer"
+  val measurementResponseTimeoutTimer = "measurement-response-timeout-timer"
   val connectionAttemptTimer = "connection-attempt-timer"
-  val connectionAttemptTimeoutTimer = "connection-attempt-timeout-timer"
+  val unstableTimeoutTimer = "connection-attempt-timeout-timer"
   val errorNotificationTimer = "error-notification-timer"
 
   case class Subscribe()
-  case class AttemptConnect()
   case class InspectionRequest()
+  case class InspectionResponseTimeout()
   case class MeasurementRequest()
+  case class MeasurementResponseTimeout()
   case class UnreachableAnalyzer()
-  case class ConnectionAttemptTimeout()
+  case class UnstableTimeout()
 
   case class CannotConnectAnalyzerException() extends IllegalStateException
 }
@@ -40,105 +46,130 @@ class AnalyzerProxy extends Actor with LoggingFSM[State, Data] with AppConfig {
 
   val config = context.system.settings.config
 
-  val inspector = context.actorSelection(inspectorEntryActorPath)
+  val initialContacts = contactPoints.map {
+    case AddressFromURIString(address) =>
+      context.actorSelection(RootActorPath(address) / "user" / "receptionist")
+  }.toSet
 
-  val buffer = context.actorSelection(bufferEntryActorPath)
+  val clusterClient = context.actorOf(ClusterClient.props(initialContacts), "cluster-client")
 
   context.system.eventStream.subscribe(self, classOf[RemotingLifecycleEvent])
 
-  startWith(Unreachable, emptySubscribers)
+  startWith(Init, emptySubscribers)
 
-  when(Unreachable, stateTimeout = initialConnectionAttemptTimeout milliseconds) {
+  when(Init, stateTimeout = initialConnectionAttemptTimeout milliseconds) {
 
-    case Event(_: AssociatedEvent, _) =>
-      goto(Reachable)
-
-    case Event(_: DisassociatedEvent | StateTimeout, _) =>
-      goto(AttemptingConnect)
+    case Event(StateTimeout, _) =>
+      goto(Unstable)
   }
 
-  when(Reachable) {
-
-    case Event(msg: analysis.api.Alert, Subscribers(subscribers)) =>
-      subscribers foreach { _ forward msg }
-      stay()
-
-    case Event(msg: analysis.api.LowerLimit, Subscribers(subscribers)) =>
-      subscribers foreach { _ forward msg }
-      stay()
+  when(Stable) {
 
     case Event(analysis.api.DoneInspection, _) =>
+      cancelTimer(inspectionResponseTimeoutTimer)
       setTimer(inspectionRequestTimer,  InspectionRequest, inspectionRequestInterval milliseconds)
       stay()
 
-    case Event(InspectionRequest, _) =>
-      inspector ! analysis.api.InspectionRequest
-      stay()
-
-    case Event(msg: analysis.api.Snapshot, Subscribers(subscribers)) =>
+    case Event(msg: analysis.api.Snapshot, ProxyData(subscribers, _)) =>
+      cancelTimer(measurementResponseTimeoutTimer)
       setTimer(measurementRequestTimer,  MeasurementRequest, measurementRequestInterval milliseconds)
       subscribers foreach { _ forward msg }
       stay()
 
-    case Event(MeasurementRequest, _) =>
-      buffer ! analysis.api.MeasurementRequest
+    case Event(msg: analysis.api.LowerLimit, ProxyData(subscribers, _)) =>
+      subscribers foreach { _ forward msg }
       stay()
 
-    case Event(_: DisassociatedEvent, _) =>
-      goto(Unreachable)
+    case Event(msg: analysis.api.Alert, ProxyData(subscribers, _)) =>
+      subscribers foreach { _ forward msg }
+      stay()
   }
 
-  when(AttemptingConnect) {
+  when(Unstable) {
 
-    case Event(_: AssociatedEvent, _) =>
-      goto(Reachable)
-
-    case Event(_: DisassociatedEvent, _) =>
+    case Event(UnreachableAnalyzer, ProxyData(subscribers, associated)) =>
+      if (associated.isEmpty) {
+        subscribers foreach { _ ! UnreachableAnalyzer }
+      }
       stay()
 
-    case Event(ConnectionAttemptTimeout, _) =>
+    case Event(`unstableTimeoutDuration`, _) =>
       throw new CannotConnectAnalyzerException
   }
 
   whenUnhandled {
 
-    case Event(AttemptConnect, _) =>
-      buffer ! analysis.api.MeasurementRequest
-      inspector ! analysis.api.InspectionRequest
+    case Event(InspectionRequest, _) =>
+      clusterClient ! ClusterClient.Send("/user/analysis-supervisor/inspection-supervisor/inspection-manager", analysis.api.InspectionRequest, false)
+      setTimer(inspectionResponseTimeoutTimer, InspectionResponseTimeout, inspectionResponseTimeoutDuration milliseconds)
       stay()
 
-    case Event(Subscribe, data @ Subscribers(subscribers)) =>
+    case Event(InspectionResponseTimeout, _) =>
+      self ! InspectionRequest
+      goto(Unstable)
+
+    case Event(MeasurementRequest, _) =>
+      clusterClient ! ClusterClient.Send("/user/analysis-supervisor/buffer", analysis.api.MeasurementRequest, false)
+      setTimer(measurementResponseTimeoutTimer, MeasurementResponseTimeout, measurementResponseTimeoutDuration milliseconds)
+      stay()
+
+    case Event(MeasurementResponseTimeout, _) =>
+      self ! MeasurementRequest
+      goto(Unstable)
+
+    case Event(analysis.api.DoneInspection, _) =>
+      cancelTimer(inspectionResponseTimeoutTimer)
+      setTimer(inspectionRequestTimer,  InspectionRequest, inspectionRequestInterval milliseconds)
+      goto(Stable)
+
+    case Event(msg: analysis.api.Snapshot, ProxyData(subscribers, _)) =>
+      cancelTimer(measurementResponseTimeoutTimer)
+      setTimer(measurementRequestTimer,  MeasurementRequest, measurementRequestInterval milliseconds)
+      goto(Stable)
+
+    case Event(msg: analysis.api.Alert, ProxyData(subscribers, _)) =>
+      goto(Stable)
+
+    case Event(msg: analysis.api.LowerLimit, ProxyData(subscribers, _)) =>
+      goto(Stable)
+
+    case Event(e @ AssociatedEvent(_, remoteAddress, false), data: ProxyData) =>
+      log.info(e.toString)
+      log.info(data.toString)
+      stay() using data.copy(associated = data.associated + remoteAddress)
+
+    case Event(e @ DisassociatedEvent(_, remoteAddress, false), data: ProxyData) =>
+      log.info(e.toString)
+      log.info(data.toString)
+      goto(Unstable) using data.copy(associated = data.associated - remoteAddress)
+
+    case Event(error: AssociationErrorEvent, _) =>
+      log.error(error.cause, "Error detected in Remote Analyzer")
+      goto(Unstable)
+
+    case Event(Subscribe, data @ ProxyData(subscribers, _)) =>
       val subscriber = sender
       context.watch(subscriber)
       stay() using data.copy(subscribers = subscribers + subscriber)
 
-    case Event(UnreachableAnalyzer, Subscribers(subscribers)) =>
-      subscribers foreach { _ ! UnreachableAnalyzer}
-      stay()
-
-    case Event(Terminated(subscriber), data @ Subscribers(subscribers)) =>
+    case Event(Terminated(subscriber), data @ ProxyData(subscribers, _)) =>
       stay() using data.copy(subscribers = subscribers - subscriber)
-
-    case Event(error: AssociationErrorEvent, _) =>
-      log.error(error.cause, "Error detected in Remote Analyzer")
-      stay()
   }
 
   override def preStart() = {
-    self ! AttemptConnect
+    self ! InspectionRequest
+    self ! MeasurementRequest
   }
 
   onTransition {
 
-    case _ -> AttemptingConnect =>
-      setTimer(connectionAttemptTimer, AttemptConnect, connectionAttemptInterval milliseconds, repeat = true)
+    case _ -> Unstable =>
       setTimer(errorNotificationTimer, UnreachableAnalyzer, errorNotificationInterval milliseconds, repeat = true)
-      setTimer(connectionAttemptTimeoutTimer, ConnectionAttemptTimeout, connectionAttemptTimeout milliseconds)
+      setTimer(unstableTimeoutTimer, UnstableTimeout, unstableTimeoutDuration milliseconds)
 
-    case AttemptingConnect -> Reachable =>
-      cancelTimer(connectionAttemptTimer)
+    case Unstable -> Stable =>
       cancelTimer(errorNotificationTimer)
-      cancelTimer(connectionAttemptTimeoutTimer)
+      cancelTimer(unstableTimeoutTimer)
   }
 
   initialize()

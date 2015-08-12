@@ -2,6 +2,7 @@ package com.example.analyer.actors.inspection
 
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
+import akka.contrib.pattern.{ClusterReceptionistExtension, ClusterReceptionist}
 import com.example.analyer.actors.Channel
 
 import scala.concurrent.duration._
@@ -21,8 +22,11 @@ class InspectionSupervisor extends Actor with ActorLogging {
   def createInspectionChannel() =
     context.actorOf(Channel.props(createInspectionManager()), "inspection-channel")
 
-  def createInspectionManager() =
-    context.actorOf(Props[InspectionManager], "inspection-manager")
+  def createInspectionManager() = {
+    val inspectionManager = context.actorOf(Props[InspectionManager], "inspection-manager")
+    ClusterReceptionistExtension(context.system).registerService(inspectionManager)
+    inspectionManager
+  }
 
   override def preStart() = {
     createInspectionChannel()
