@@ -128,8 +128,18 @@ activator solarFarmSimulator/run
 
 ##### (4) Run Analyzer
 
+Requires at least two nodes
+
 ~~~
-activator analyzer/run
+activator analyzer/runNode1
+activator analyzer/runNode2
+~~~
+
+If you need additional nodes can run to four
+
+~~~
+activator analyzer/runNode3
+activator analyzer/runNode4
 ~~~
 
 ##### (5) Run Monitor
