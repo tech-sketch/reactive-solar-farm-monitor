@@ -1,8 +1,8 @@
 package com.example.analyzer
 
 import akka.testkit._
-import com.example.analyer.actors.Channel
-import com.example.analyer.actors.Channel._
+import com.example.analyzer.actors.Channel
+import com.example.analyzer.actors.Channel._
 import com.example.testkit.Akka
 import net.sigusr.mqtt.api._
 import org.junit.runner.RunWith

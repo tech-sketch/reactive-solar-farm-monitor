@@ -125,8 +125,18 @@ activator solarFarmSimulator/run
 
 ##### (4) Analyzerの実行
 
+少なくとも2つのノードが必要です
+
 ~~~
-activator analyzer/run
+activator analyzer/runNode1
+activator analyzer/runNode2
+~~~
+
+追加のノードが必要な場合は4台まで起動できます
+
+~~~
+activator analyzer/runNode3
+activator analyzer/runNode4
 ~~~
 
 ##### (5) Monitorの実行

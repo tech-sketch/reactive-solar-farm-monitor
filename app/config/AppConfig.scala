@@ -6,6 +6,8 @@ trait AppConfig {
 
   val config: com.typesafe.config.Config
 
+  lazy val analyzerClusterRole = config.getString("solar-farm-monitor.analyzer.cluster.role")
+
   lazy val inspectorEntryActorPath = config.getString("solar-farm-monitor.analyzer.inspector-actor-path")
 
   lazy val bufferEntryActorPath = config.getString("solar-farm-monitor.analyzer.buffer-actor-path")
@@ -22,9 +24,5 @@ trait AppConfig {
 
   lazy val errorNotificationInterval = config.getDuration("solar-farm-monitor.analyzer.error-notification-interval", MILLISECONDS)
 
-  lazy val unstableTimeoutDuration = config.getDuration("solar-farm-monitor.analyzer.unstable-timeout", MILLISECONDS)
-
-  lazy val initialConnectionAttemptTimeout = config.getDuration("solar-farm-monitor.analyzer.initial-connection-attempt-timeout", MILLISECONDS)
-
-  lazy val contactPoints = config.getStringList("solar-farm-monitor.analyzer.contact-points")
+  lazy val unreachableTimeoutDuration = config.getDuration("solar-farm-monitor.analyzer.unreachable-timeout", MILLISECONDS)
 }

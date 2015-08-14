@@ -48,6 +48,8 @@ trait Config {
 
   // Analyzer
 
+  lazy val inspectingTimeoutDuration = config.getDuration("solar-farm-analyzer.inspecting-timeout", MILLISECONDS)
+
   lazy val analyzerClusterName = config.getString("solar-farm-analyzer.cluster.name")
 
   lazy val alertThresholdPer = config.getInt("solar-farm-analyzer.inspector.alert-threshold-per")
