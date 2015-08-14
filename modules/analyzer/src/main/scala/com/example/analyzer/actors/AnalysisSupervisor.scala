@@ -25,10 +25,6 @@ class AnalysisSupervisor extends Actor with ActorLogging {
   val buffer = context.actorSelection("buffer")
 
   def receive = {
-    case analysis.api.InspectionRequest =>
-      inspectionManager forward analysis.api.InspectionRequest
-    case analysis.api.MeasurementRequest =>
-      buffer forward analysis.api.MeasurementRequest
     case Destroy =>
       inspectionManager ! InspectionManager.AbortInspection
   }

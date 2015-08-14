@@ -48,11 +48,17 @@ trait Config {
 
   // Analyzer
 
-  lazy val inspectingTimeoutDuration = config.getDuration("solar-farm-analyzer.inspecting-timeout", MILLISECONDS)
-
   lazy val analyzerClusterName = config.getString("solar-farm-analyzer.cluster.name")
 
-  lazy val alertThresholdPer = config.getInt("solar-farm-analyzer.inspector.alert-threshold-per")
+  lazy val monitorClusterRole = config.getString("solar-farm-analyzer.cluster.monitor-role")
+
+  lazy val inspectionInterval = config.getDuration("solar-farm-analyzer.inspection.interval", MILLISECONDS)
+
+  lazy val alertThresholdPer = config.getInt("solar-farm-analyzer.inspection.alert-threshold-per")
+
+  lazy val inspectingTimeoutDuration = config.getDuration("solar-farm-analyzer.inspection.timeout", MILLISECONDS)
+
+  lazy val snapshotInterval = config.getDuration("solar-farm-analyzer.buffer.snapshot-interval", MILLISECONDS)
 
   lazy val ghostCollectionInitialDelay = config.getDuration("solar-farm-analyzer.buffer.ghost-collection-initial-delay", MILLISECONDS)
 

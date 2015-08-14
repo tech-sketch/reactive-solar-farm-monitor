@@ -21,20 +21,21 @@ object InspectionManager {
   case class Collection(population: Int) extends Data
   case class Inspection(progressPopulation: Int, totalPopulation: Int, receiver: ActorRef) extends Data
 
-  val inspectingTimeoutTimer = "inspecting-timeout-timer"
+  val inspectionTimer = "inspection-timer"
+  val inspectionTimeoutTimer = "inspection-timeout-timer"
+
 
   case class Sample(measurement: Measurement)
-  case class Execute(population: Int, receiver: ActorRef)
+  case class Execute(population: Int)
+  case class Inspect()
   case class AbortInspection()
-  case class InspectingTimeout()
+  case class InspectionTimeout()
 }
 
 import InspectionManager._
 
 class InspectionManager extends Actor with LoggingFSM[State, Data] with Stash with Config {
   import InspectionManager._
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   val config = context.system.settings.config
 
@@ -53,11 +54,11 @@ class InspectionManager extends Actor with LoggingFSM[State, Data] with Stash wi
       inspectorRouter     ! Sample(measurement)
       stay() using c.copy(population = c.population + 1)
 
-    case Event(analysis.api.InspectionRequest, Collection(totalPopulation)) =>
-      sumCalculatorRouter  ! Broadcast(Execute(totalPopulation, receiver = sender))
-      lowerLimitCalculator ! Execute(totalPopulation, receiver = sender)
-      inspectorRouter      ! Broadcast(Execute(totalPopulation, receiver = sender))
-      setTimer(inspectingTimeoutTimer, InspectingTimeout, inspectingTimeoutDuration milliseconds)
+    case Event(Inspection, Collection(totalPopulation)) =>
+      sumCalculatorRouter  ! Broadcast(Execute(totalPopulation))
+      lowerLimitCalculator ! Execute(totalPopulation)
+      inspectorRouter      ! Broadcast(Execute(totalPopulation))
+      setTimer(inspectionTimeoutTimer, InspectionTimeout, inspectingTimeoutDuration milliseconds)
       goto(Inspecting) using Inspection(0, totalPopulation, sender)
 
     case Event(Inspector.Done(population), _) =>
@@ -74,16 +75,10 @@ class InspectionManager extends Actor with LoggingFSM[State, Data] with Stash wi
     case Event(Inspector.Done(population), inspection @ Inspection(progressPopulation, totalPopulation, receiver)) =>
       val progress = progressPopulation + population
       if (progress == totalPopulation) {
-        receiver ! analysis.api.DoneInspection
-        cancelTimer(inspectingTimeoutTimer)
         goto(Collecting) using Collection(0)
       } else {
         stay() using inspection.copy(progressPopulation = progress)
       }
-
-    case Event(analysis.api.InspectionRequest, _) =>
-      sender ! analysis.api.DoneInspection
-      stay()
 
     case Event(Packet(measurement, _), _) =>
       stash()
@@ -98,9 +93,23 @@ class InspectionManager extends Actor with LoggingFSM[State, Data] with Stash wi
   }
 
   whenUnhandled {
-    case Event(InspectingTimeout, _) =>
+    case Event(InspectionTimeout, _) =>
       self ! AbortInspection
       stay()
+  }
+
+  override def preStart() = {
+    setTimer(inspectionTimer, Inspection, inspectionInterval milliseconds)
+  }
+
+  onTransition {
+
+    case Collecting -> Inspecting =>
+      setTimer(inspectionTimeoutTimer, InspectionTimeout, inspectingTimeoutDuration milliseconds)
+
+    case Inspecting -> Collecting =>
+      setTimer(inspectionTimer, Inspection, inspectionInterval milliseconds)
+      cancelTimer(inspectionTimeoutTimer)
   }
 
   initialize()

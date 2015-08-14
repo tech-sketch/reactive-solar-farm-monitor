@@ -1,6 +1,7 @@
 package com.example.analyzer.actors.inspection
 
 import akka.actor._
+import com.example.analyzer.MonitorContactSupervisor
 import com.example.analyzer.actors.inspection.InspectionManager.{AbortInspection, Execute}
 import com.example.analyzer.actors.inspection.LowerLimitCalculator.{Empty, EmptyLowerLimit}
 import com.example.farm.api.Measurement
@@ -17,8 +18,8 @@ object Inspector {
   case object Inspecting extends State
 
   sealed trait Data
-  case class Inspection(measurements: Seq[Measurement], owner: ActorRef, receiver: ActorRef) extends Data
-  val emptyInspection = Inspection(measurements = Seq(), owner = Actor.noSender, receiver = Actor.noSender)
+  case class Inspection(measurements: Seq[Measurement], owner: ActorRef) extends Data
+  val emptyInspection = Inspection(measurements = Seq(), owner = Actor.noSender)
 
   case class PartialSum(sum: BigDecimal, population: Int)
   case class Done(population: Int)
@@ -28,6 +29,8 @@ import Inspector._
 
 class Inspector extends LoggingFSM[State, Data] with Stash {
 
+  val monitorContact = context.actorSelection(MonitorContactSupervisor.monitorContactAbsolutePath)
+
   startWith(Collecting, emptyInspection)
 
   when(Collecting) {
@@ -35,8 +38,8 @@ class Inspector extends LoggingFSM[State, Data] with Stash {
     case Event(InspectionManager.Sample(measurement), samples: Inspection) =>
       stay() using samples.copy(measurements = samples.measurements :+ measurement)
 
-    case Event(Execute(_, receiver), samples: Inspection) =>
-      goto(Inspecting) using samples.copy(owner = sender, receiver = receiver)
+    case Event(_: Execute, samples: Inspection) =>
+      goto(Inspecting) using samples.copy(owner = sender)
 
     case Event(_: LowerLimitCalculator.LowerLimit, _) | Event(_: LowerLimitCalculator.EmptyLowerLimit, _) =>
       stash()
@@ -45,11 +48,11 @@ class Inspector extends LoggingFSM[State, Data] with Stash {
 
   when(Inspecting) {
 
-    case Event(LowerLimitCalculator.EmptyLowerLimit(population), Inspection(_, owner, _)) =>
+    case Event(LowerLimitCalculator.EmptyLowerLimit(population), Inspection(_, owner)) =>
       owner ! Done(population)
       goto(Collecting) using emptyInspection
 
-    case Event(LowerLimitCalculator.LowerLimit(lowerLimit, population), Inspection(measurements, owner, receiver)) =>
+    case Event(LowerLimitCalculator.LowerLimit(lowerLimit, population), Inspection(measurements, owner)) =>
 
       import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -58,7 +61,7 @@ class Inspector extends LoggingFSM[State, Data] with Stash {
           Future {
             if (m.measuredValue < lowerLimit) {
               log.debug(s"Alert: panelId ${m.panelId},  measuredDateTime ${m.measuredDateTime.toString("HH:mm:ss:SSS")}, measuredValue ${m.measuredValue.setScale(2, RoundingMode.HALF_DOWN)}, lowerLimit ${lowerLimit.setScale(2, RoundingMode.HALF_DOWN)}, population ${population}")
-              receiver ! analysis.api.Alert(m.panelId, DateTime.now(), m.measuredValue, m.measuredDateTime)
+              monitorContact ! analysis.api.Alert(m.panelId, DateTime.now(), m.measuredValue, m.measuredDateTime)
             } else {
               log.debug(s"OK: panelId ${m.panelId},  measuredDateTime ${m.measuredDateTime.toString("HH:mm:ss:SSS")}, measuredValue ${m.measuredValue.setScale(2, RoundingMode.HALF_DOWN)}, lowerLimit ${lowerLimit.setScale(2, RoundingMode.HALF_DOWN)}, population ${population}")
             }
@@ -70,6 +73,7 @@ class Inspector extends LoggingFSM[State, Data] with Stash {
    }
 
   whenUnhandled {
+
     case Event(AbortInspection, _) =>
       goto(Collecting) using emptyInspection
   }

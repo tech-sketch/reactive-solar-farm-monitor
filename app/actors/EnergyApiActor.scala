@@ -1,6 +1,6 @@
 package actors
 
-import actors.AnalyzerProxy.UnreachableAnalyzer
+import actors.AnalysisBroker.UnreachableAnalyzer
 import akka.actor._
 import akka.event.LoggingReceive
 import org.joda.time.DateTime
@@ -44,6 +44,6 @@ class EnergyApiActor(out: ActorRef, analyzerProxy: ActorRef) extends Actor with 
   }
 
   override def preStart() = {
-    analyzerProxy ! AnalyzerProxy.Subscribe
+    analyzerProxy ! AnalysisBroker.Subscribe
   }
 }
