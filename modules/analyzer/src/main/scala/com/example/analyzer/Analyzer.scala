@@ -6,7 +6,7 @@ import akka.actor.{PoisonPill, Props, ActorSystem}
 import akka.contrib.pattern.{ClusterSingletonProxy, ClusterSingletonManager}
 import akka.event.Logging
 import com.example.analyzer.actors.AnalysisSupervisor.Destroy
-import com.example.analyzer.actors.{AnalysisSupervisor}
+import com.example.analyzer.actors.{MonitorContact, AnalysisSupervisor}
 import com.typesafe.config.{ConfigFactory, Config}
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
@@ -31,6 +31,8 @@ object Analyzer {
         singletonPath = "user/singleton/analysis-supervisor",
         role = Some("analyzer")
       ), name = "analysis-proxy")
+
+      system.actorOf(Props[MonitorContactSupervisor], name = "monitor-contact-supervisor")
 
       system.awaitTermination()
     }

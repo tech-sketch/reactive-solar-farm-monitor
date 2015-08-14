@@ -2,6 +2,7 @@ package com.example.analyzer.actors
 
 import akka.actor._
 import com.example.Config
+import com.example.analyzer.MonitorContactSupervisor
 import com.example.analyzer.actors.Channel.Packet
 import com.example.farm
 import com.example.analysis
@@ -21,7 +22,9 @@ object Buffer {
   sealed trait Data
   case class Chunk(measurements: Map[PanelId, analysis.api.Measurement]) extends Data
 
-  case class Open()
+  val snapshotTimer = "snapshot-timer"
+  val ghostCollectionTimer = "ghost-collection-timer"
+
   case class TakeSnapshot()
   case class CollectGhosts()
   case class GhostsCollected(measurements: Map[PanelId, analysis.api.Measurement])
@@ -33,22 +36,14 @@ class Buffer extends LoggingFSM[State, Data] with Stash with Config {
 
   val config = context.system.settings.config
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
-  val ghostCollectionSchedule =
-    context.system.scheduler.schedule(ghostCollectionInitialDelay milliseconds, ghostCollectionInterval milliseconds, self, CollectGhosts)
+  val monitorContact = context.actorSelection(MonitorContactSupervisor.monitorContactAbsolutePath)
 
   startWith(Receiving, Chunk(Map()))
 
-  when(UnOpen) {
-    case Event(Open, chunk: Chunk) =>
-
-      goto(Receiving)
-  }
-
   when(Receiving) {
-    case Event(MeasurementRequest, chunk: Chunk) =>
-      sender ! Snapshot(chunk.measurements)
+
+    case Event(TakeSnapshot, chunk: Chunk) =>
+      monitorContact ! Snapshot(chunk.measurements)
       stay()
 
     case Event(Packet(farm.api.Measurement(panelId, measuredValue, measuredDateTime), _), chunk: Chunk) =>
@@ -80,13 +75,15 @@ class Buffer extends LoggingFSM[State, Data] with Stash with Config {
       stay()
   }
 
-  onTransition {
-    case CollectingGhosts -> Receiving =>
-      unstashAll()
+  override def preStart() = {
+    setTimer(snapshotTimer, TakeSnapshot, snapshotInterval milliseconds, repeat = true)
+    setTimer(ghostCollectionTimer, CollectGhosts, ghostCollectionInterval milliseconds, repeat = true)
   }
 
-  override def postStop() = {
-    ghostCollectionSchedule.cancel()
+  onTransition {
+
+    case CollectingGhosts -> Receiving =>
+      unstashAll()
   }
 
   initialize()

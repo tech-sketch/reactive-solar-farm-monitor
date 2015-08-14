@@ -6,17 +6,13 @@ package object api {
 
   type PanelId = String
 
-  case class InspectionRequest()
-
   case class Alert(panelId: PanelId, detectedDateTime: DateTime, measuredValue: BigDecimal, measuredDateTime: DateTime)
 
-  case class DoneInspection()
+  sealed trait ApiData
 
-  case class MeasurementRequest()
+  case class Snapshot(measurements: Map[PanelId, Measurement]) extends ApiData
 
-  case class Snapshot(measurements: Map[PanelId, Measurement])
+  case class Measurement(panelId: PanelId, measuredValue: BigDecimal, measuredDateTime: DateTime) extends ApiData
 
-  case class Measurement(panelId: PanelId, measuredValue: BigDecimal, measuredDateTime: DateTime)
-
-  case class LowerLimit(value: BigDecimal, detectedDateTime: DateTime)
+  case class LowerLimit(value: BigDecimal, detectedDateTime: DateTime) extends ApiData
 }

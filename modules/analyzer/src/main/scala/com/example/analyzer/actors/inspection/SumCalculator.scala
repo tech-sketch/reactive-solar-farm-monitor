@@ -1,7 +1,7 @@
 package com.example.analyzer.actors.inspection
 
 import akka.actor._
-import com.example.analyzer.actors.inspection.InspectionManager.Execute
+import com.example.analyzer.actors.inspection.InspectionManager.{AbortInspection, Execute}
 
 import scala.math.BigDecimal.RoundingMode
 
@@ -36,6 +36,12 @@ class SumCalculator(lowerLimitCalculator: ActorRef) extends LoggingFSM[State, Da
       }
       lowerLimitCalculator !  PartialSum(sum, population)
       stay() using emptySum
+  }
+
+  whenUnhandled {
+
+    case Event(AbortInspection, _) =>
+      goto(Collecting) using emptySum
   }
 
   initialize()

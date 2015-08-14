@@ -3,6 +3,7 @@ package com.example.analyzer.actors.inspection
 import akka.actor._
 import akka.routing.Broadcast
 import akka.routing.ConsistentHashingRouter.ConsistentHashable
+import com.example.analyzer.MonitorContactSupervisor
 import com.example.{analysis, Config}
 import com.example.analyzer.actors.inspection.InspectionManager.{AbortInspection, Execute}
 import com.example.analyzer.actors.inspection.SumCalculator.PartialSum
@@ -24,7 +25,7 @@ object LowerLimitCalculator {
   sealed trait Data
   case class Empty() extends Data
   case class ExecuteContext(population: Int) extends Data
-  case class LowerLimitCalculation(sum: BigDecimal, preparedPopulation:Int, totalPopulation: Int, receiver: ActorRef) extends Data
+  case class LowerLimitCalculation(sum: BigDecimal, preparedPopulation:Int, totalPopulation: Int) extends Data
 
   def props(inspectorRouter: ActorRef) = Props(new LowerLimitCalculator(inspectorRouter))
 }
@@ -35,12 +36,14 @@ class LowerLimitCalculator(inspectorRouter: ActorRef) extends LoggingFSM[State, 
 
   val config = context.system.settings.config
 
+  val monitorContact = context.actorSelection(MonitorContactSupervisor.monitorContactAbsolutePath)
+
   startWith(Pending, Empty())
 
   when(Pending) {
 
-    case Event(Execute(population, receiver), _) =>
-      goto(Preparing) using LowerLimitCalculation(BigDecimal(0), 0, population, receiver)
+    case Event(Execute(population), _) =>
+      goto(Preparing) using LowerLimitCalculation(BigDecimal(0), 0, population)
 
     case Event(_: PartialSum, _) =>
       stash()
@@ -60,7 +63,7 @@ class LowerLimitCalculator(inspectorRouter: ActorRef) extends LoggingFSM[State, 
           inspectorRouter ! Broadcast(LowerLimit(lowerLimit, population))
 
           log.debug("LowerLimit: {}, population {}", lowerLimit.setScale(2, RoundingMode.HALF_DOWN), population)
-          c.receiver ! analysis.api.LowerLimit(lowerLimit, DateTime.now())
+          monitorContact ! analysis.api.LowerLimit(lowerLimit, DateTime.now())
         } else {
           inspectorRouter ! Broadcast(EmptyLowerLimit(population))
         }
@@ -73,6 +76,7 @@ class LowerLimitCalculator(inspectorRouter: ActorRef) extends LoggingFSM[State, 
   }
 
   whenUnhandled {
+
     case Event(AbortInspection, _) =>
       goto(Pending) using Empty()
   }
