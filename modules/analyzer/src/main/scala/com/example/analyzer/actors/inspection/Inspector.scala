@@ -7,6 +7,7 @@ import com.example.analyzer.actors.inspection.LowerLimitCalculator.{Empty, Empty
 import com.example.farm.api.Measurement
 import com.example.{Config, analysis}
 import org.joda.time.DateTime
+import org.slf4j.MDC
 
 import scala.concurrent.Future
 import scala.math.BigDecimal.RoundingMode
@@ -57,8 +58,10 @@ class Inspector extends LoggingFSM[State, Data] with Stash {
       import scala.concurrent.ExecutionContext.Implicits.global
 
       Future.sequence {
+        MDC.put("role", "Worker")
         measurements map { m =>
           Future {
+            MDC.put("role", "Worker")
             if (m.measuredValue < lowerLimit) {
               log.debug(s"Alert: panelId ${m.panelId},  measuredDateTime ${m.measuredDateTime.toString("HH:mm:ss:SSS")}, measuredValue ${m.measuredValue.setScale(2, RoundingMode.HALF_DOWN)}, lowerLimit ${lowerLimit.setScale(2, RoundingMode.HALF_DOWN)}, population ${population}")
               monitorContact ! analysis.api.Alert(m.panelId, DateTime.now(), m.measuredValue, m.measuredDateTime)
@@ -71,6 +74,10 @@ class Inspector extends LoggingFSM[State, Data] with Stash {
 
       goto(Collecting) using emptyInspection
    }
+
+  override def preStart() = {
+    MDC.put("role", "Worker")
+  }
 
   whenUnhandled {
 

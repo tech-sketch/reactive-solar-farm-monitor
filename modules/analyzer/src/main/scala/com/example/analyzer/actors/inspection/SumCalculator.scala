@@ -2,6 +2,7 @@ package com.example.analyzer.actors.inspection
 
 import akka.actor._
 import com.example.analyzer.actors.inspection.InspectionManager.{AbortInspection, Execute}
+import org.slf4j.MDC
 
 import scala.math.BigDecimal.RoundingMode
 
@@ -36,6 +37,10 @@ class SumCalculator(lowerLimitCalculator: ActorRef) extends LoggingFSM[State, Da
       }
       lowerLimitCalculator !  PartialSum(sum, population)
       stay() using emptySum
+  }
+
+  override def preStart() = {
+    MDC.put("role", "Worker")
   }
 
   whenUnhandled {

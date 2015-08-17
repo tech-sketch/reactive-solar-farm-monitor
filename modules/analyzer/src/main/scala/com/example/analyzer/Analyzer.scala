@@ -8,6 +8,7 @@ import akka.event.Logging
 import com.example.analyzer.actors.AnalysisSupervisor.Destroy
 import com.example.analyzer.actors.{MonitorContact, AnalysisSupervisor}
 import com.typesafe.config.{ConfigFactory, Config}
+import org.slf4j.MDC
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 
@@ -15,6 +16,8 @@ object Analyzer {
 
   def main(args: Array[String]) {
     optionParser.parse(args, CommandOption()).foreach { option =>
+
+      MDC.put("system", "Analyzer")
 
       val system = ActorSystem(option.analyzerClusterName, option.asConfig())
 

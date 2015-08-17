@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import actors.{MonitorSupervisor, AnalysisBroker, EnergyApiActor}
 import akka.actor.{Props, ActorSystem}
+import org.slf4j.MDC
 import play.api.libs.json._
 import play.api.mvc._
 

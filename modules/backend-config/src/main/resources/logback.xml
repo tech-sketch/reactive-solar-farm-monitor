@@ -4,7 +4,7 @@
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
-      <pattern>%date{HH:mm:ss.SSS} %highlight(%5level) %cyan([%logger{10}]) %message%n%xException{short}</pattern>
+      <pattern>%cyan(%date{HH:mm:ss}) %yellow([%mdc{system}-%mdc{role}]) %message%n%xException{short}</pattern>
     </encoder>
   </appender>
 

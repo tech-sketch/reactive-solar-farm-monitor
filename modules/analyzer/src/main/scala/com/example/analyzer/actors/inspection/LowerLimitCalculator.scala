@@ -8,6 +8,7 @@ import com.example.{analysis, Config}
 import com.example.analyzer.actors.inspection.InspectionManager.{AbortInspection, Execute}
 import com.example.analyzer.actors.inspection.SumCalculator.PartialSum
 import org.joda.time.DateTime
+import org.slf4j.MDC
 
 import scala.math.BigDecimal.RoundingMode
 
@@ -62,6 +63,7 @@ class LowerLimitCalculator(inspectorRouter: ActorRef) extends LoggingFSM[State, 
           val lowerLimit = mean * alertThresholdPer / 100
           inspectorRouter ! Broadcast(LowerLimit(lowerLimit, population))
 
+          MDC.put("role", "Master")
           log.debug("LowerLimit: {}, population {}", lowerLimit.setScale(2, RoundingMode.HALF_DOWN), population)
           monitorContact ! analysis.api.LowerLimit(lowerLimit, DateTime.now())
         } else {

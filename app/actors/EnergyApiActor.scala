@@ -40,7 +40,7 @@ class EnergyApiActor(out: ActorRef, analyzerProxy: ActorRef) extends Actor with 
       out ! Json.obj("lowerLimit" -> data)
 
     case UnreachableAnalyzer =>
-      out ! Json.obj("error" -> Error("サーバーで問題が発生しています。しばらくお待ちください。"))
+      out ! Json.obj("error" -> Error("サーバーで問題が発生しています。しばらくご歓談ください。"))
   }
 
   override def preStart() = {
