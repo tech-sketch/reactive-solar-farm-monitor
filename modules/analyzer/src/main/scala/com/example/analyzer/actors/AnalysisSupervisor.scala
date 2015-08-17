@@ -2,6 +2,7 @@ package com.example.analyzer.actors
 
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
+import akka.event.{Logging, DiagnosticLoggingAdapter}
 import com.example.analyzer.actors.AnalysisSupervisor.Destroy
 import com.example.analyzer.actors.inspection.{InspectionManager, InspectionSupervisor}
 import com.example.analysis

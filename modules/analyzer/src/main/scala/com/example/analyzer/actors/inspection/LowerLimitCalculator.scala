@@ -1,6 +1,7 @@
 package com.example.analyzer.actors.inspection
 
 import akka.actor._
+import akka.event.{Logging, DiagnosticLoggingAdapter}
 import akka.routing.Broadcast
 import akka.routing.ConsistentHashingRouter.ConsistentHashable
 import com.example.analyzer.MonitorContactSupervisor
@@ -8,7 +9,6 @@ import com.example.{analysis, Config}
 import com.example.analyzer.actors.inspection.InspectionManager.{AbortInspection, Execute}
 import com.example.analyzer.actors.inspection.SumCalculator.PartialSum
 import org.joda.time.DateTime
-import org.slf4j.MDC
 
 import scala.math.BigDecimal.RoundingMode
 
@@ -34,6 +34,8 @@ object LowerLimitCalculator {
 import LowerLimitCalculator._
 
 class LowerLimitCalculator(inspectorRouter: ActorRef) extends LoggingFSM[State, Data] with Stash with Config {
+
+  override val log: DiagnosticLoggingAdapter = Logging(this)
 
   val config = context.system.settings.config
 
@@ -63,7 +65,6 @@ class LowerLimitCalculator(inspectorRouter: ActorRef) extends LoggingFSM[State, 
           val lowerLimit = mean * alertThresholdPer / 100
           inspectorRouter ! Broadcast(LowerLimit(lowerLimit, population))
 
-          MDC.put("role", "Master")
           log.debug("LowerLimit: {}, population {}", lowerLimit.setScale(2, RoundingMode.HALF_DOWN), population)
           monitorContact ! analysis.api.LowerLimit(lowerLimit, DateTime.now())
         } else {
@@ -75,6 +76,10 @@ class LowerLimitCalculator(inspectorRouter: ActorRef) extends LoggingFSM[State, 
       } else {
         throw new IllegalPopulationException(s"Total population: ${c.totalPopulation}, Collected population: ${population}")
       }
+  }
+
+  override def preStart() = {
+    log.mdc(Map("role" -> "Master"))
   }
 
   whenUnhandled {

@@ -1,8 +1,8 @@
 package com.example.analyzer.actors.inspection
 
 import akka.actor._
+import akka.event.{Logging, DiagnosticLoggingAdapter}
 import com.example.analyzer.actors.inspection.InspectionManager.{AbortInspection, Execute}
-import org.slf4j.MDC
 
 import scala.math.BigDecimal.RoundingMode
 
@@ -24,6 +24,8 @@ import SumCalculator._
 
 class SumCalculator(lowerLimitCalculator: ActorRef) extends LoggingFSM[State, Data] with Stash {
 
+  override val log: DiagnosticLoggingAdapter = Logging(this)
+
   startWith(Collecting, emptySum)
 
   when(Collecting) {
@@ -40,7 +42,7 @@ class SumCalculator(lowerLimitCalculator: ActorRef) extends LoggingFSM[State, Da
   }
 
   override def preStart() = {
-    MDC.put("role", "Worker")
+    log.mdc(Map("role" -> "Worker"))
   }
 
   whenUnhandled {

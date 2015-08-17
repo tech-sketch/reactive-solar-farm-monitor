@@ -1,7 +1,7 @@
 package com.example.analyzer.actors.inspection
 
 import akka.actor._
-import akka.event.LoggingReceive
+import akka.event.{Logging, DiagnosticLoggingAdapter, LoggingReceive}
 import akka.routing.Broadcast
 import akka.routing.ConsistentHashingRouter.ConsistentHashable
 import com.example.Config
@@ -36,6 +36,8 @@ import InspectionManager._
 
 class InspectionManager extends Actor with LoggingFSM[State, Data] with Stash with Config {
   import InspectionManager._
+
+  override val log: DiagnosticLoggingAdapter = Logging(this)
 
   val config = context.system.settings.config
 
@@ -99,6 +101,7 @@ class InspectionManager extends Actor with LoggingFSM[State, Data] with Stash wi
   }
 
   override def preStart() = {
+    log.mdc(Map("role" -> "Master"))
     setTimer(inspectionTimer, Inspection, inspectionInterval milliseconds)
   }
 

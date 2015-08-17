@@ -1,13 +1,13 @@
 package com.example.analyzer.actors.inspection
 
 import akka.actor._
+import akka.event.{Logging, DiagnosticLoggingAdapter}
 import com.example.analyzer.MonitorContactSupervisor
 import com.example.analyzer.actors.inspection.InspectionManager.{AbortInspection, Execute}
 import com.example.analyzer.actors.inspection.LowerLimitCalculator.{Empty, EmptyLowerLimit}
 import com.example.farm.api.Measurement
 import com.example.{Config, analysis}
 import org.joda.time.DateTime
-import org.slf4j.MDC
 
 import scala.concurrent.Future
 import scala.math.BigDecimal.RoundingMode
@@ -29,6 +29,8 @@ object Inspector {
 import Inspector._
 
 class Inspector extends LoggingFSM[State, Data] with Stash {
+
+  override val log: DiagnosticLoggingAdapter = Logging(this)
 
   val monitorContact = context.actorSelection(MonitorContactSupervisor.monitorContactAbsolutePath)
 
@@ -58,10 +60,8 @@ class Inspector extends LoggingFSM[State, Data] with Stash {
       import scala.concurrent.ExecutionContext.Implicits.global
 
       Future.sequence {
-        MDC.put("role", "Worker")
         measurements map { m =>
           Future {
-            MDC.put("role", "Worker")
             if (m.measuredValue < lowerLimit) {
               log.debug(s"Alert: panelId ${m.panelId},  measuredDateTime ${m.measuredDateTime.toString("HH:mm:ss:SSS")}, measuredValue ${m.measuredValue.setScale(2, RoundingMode.HALF_DOWN)}, lowerLimit ${lowerLimit.setScale(2, RoundingMode.HALF_DOWN)}, population ${population}")
               monitorContact ! analysis.api.Alert(m.panelId, DateTime.now(), m.measuredValue, m.measuredDateTime)
@@ -76,7 +76,7 @@ class Inspector extends LoggingFSM[State, Data] with Stash {
    }
 
   override def preStart() = {
-    MDC.put("role", "Worker")
+    log.mdc(Map("role" -> "Worker"))
   }
 
   whenUnhandled {
