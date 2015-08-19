@@ -56,14 +56,21 @@ Typesafe Reactive Platform とは？
 [Docker](https://www.docker.com/) がインストールされたPCで下記のコマンドを実行してください。
 
 ~~~
-docker run -d --name=broker   -p 61613:61613                        crowbary/apache-apollo
-docker run -d --name=solar_farm_simulator  --link=broker:broker     crowbary/reactive-solar-farm-monitor-solar-farm-simulator
-docker run -d --name=analyzer -p 2551:2551 --link=broker:broker     crowbary/reactive-solar-farm-monitor-analyzer
-docker run -d --name=monitor  -p 9000:9000 --link=analyzer:analyzer crowbary/reactive-solar-farm-monitor
+docker run -d --name=broker                                    crowbary/apache-apollo
+docker run -d --name=solar_farm_simulator --link=broker:broker crowbary/reactive-solar-farm-monitor-solar-farm-simulator
+docker run -d --name=monitor -p 9000:9000                      crowbary/reactive-solar-farm-monitor
+docker run -d --name=analyzer_seed  --link=broker:broker --link=monitor:primary_seed                                      crowbary/reactive-solar-farm-monitor-analyzer
+docker run -d --name=analyzer_node1 --link=broker:broker --link=monitor:primary_seed --link=analyzer_seed:secondary_seed  crowbary/reactive-solar-farm-monitor-analyzer
+docker run -d --name=analyzer_node2 --link=broker:broker --link=monitor:primary_seed --link=analyzer_seed:secondary_seed  crowbary/reactive-solar-farm-monitor-analyzer
 ~~~
 
 ブラウザで http://[DOCKER_HOST]:9000/ へアクセスしてください。
 * DOCKER_HOST: 上記の docker run コマンドを実行したホストのIPアドレスまたはホスト名
+
+Analyzer のノードはいくつでも追加することができ、下記のコマンドを実行することで Analyzer のノードが新たに一つ立ち上がります。
+~~~
+docker run -d --link=broker:broker --link=monitor:primary_seed --link=analyzer_seed:secondary_seed  crowbary/reactive-solar-farm-monitor-analyzer
+~~~
 
 ### Typesafe Activatorを利用した起動
 

@@ -38,7 +38,7 @@ object Analyzer {
     }
   }
 
-  case class CommandOption(host: Option[String] = None, port: Option[Int] = None, master: Boolean = false, seedNodes: Seq[String] = Seq()) extends com.example.Config {
+  case class CommandOption(host: Option[String] = None, port: Option[Int] = None, seed: Boolean = false, seedNodes: Seq[String] = Seq()) extends com.example.Config {
     import ConfigFactory._
 
     val config = load()
@@ -51,7 +51,7 @@ object Analyzer {
       val seedNodeProperties = seedNodes.map { node =>
         s"""akka.cluster.seed-nodes += "akka.tcp://${analyzerClusterName}@$node""""
       } mkString("\n")
-      val roleConfig = if (master) "master.conf" else "worker.conf"
+      val roleConfig = if (seed) "seed.conf" else "node.conf"
 
       val optionConfig =
         parseMap(Map(
@@ -73,14 +73,13 @@ object Analyzer {
     } validate { x =>
       if (0 < x && x < 65535) success else failure("Value <port> must be between 0 and 65535")
     } text("port to listen messages for actors (default: 0)")
-    opt[Unit]('m', "master") action { (_, c) =>
-      c.copy(master = true)
-    } text("run as master")
+    opt[Unit]('s', "seed") action { (_, c) =>
+      c.copy(seed = true)
+    } text("run as cluster seed")
     opt[Seq[String]]("seed-nodes") action { (x, c) =>
       c.copy(seedNodes = c.seedNodes ++ x)
     } text("give a list of seed nodes like this: <ip>:<port> <ip>:<port>")
     checkConfig {
-      case CommandOption(_, _, _, Seq()) => failure("Cluster nodes need at least one seed node")
       case _ => success
     }
   }
