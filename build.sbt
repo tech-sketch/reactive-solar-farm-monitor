@@ -3,7 +3,7 @@ import sbt.Keys._
 val appName = """reactive-solar-farm-monitor"""
 
 lazy val commonSettings = Seq(
-  version := "0.2.0",
+  version := "0.3.0",
   scalaVersion := "2.11.7",
   // Specs2 dependes on bintray repository of Scalaz.
   resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
@@ -28,7 +28,7 @@ lazy val root = (project in file(".")).
     // Play provides two styles of routers, one expects its actions to be injected, the
     // other, legacy style, accesses its actions statically.
     routesGenerator := InjectedRoutesGenerator,
-    dockerExposedPorts := Seq(2551, 9000),
+    dockerExposedPorts := Seq(2550, 9000),
     dockerEntrypoint := Seq("/bin/sh", "-c",
       "HOST_IP=`ip addr show scope global | grep 'inet' | grep -Eo '[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+'`"
         + s" bin/${name.value}" + " -Dconfig.resource=application.docker.conf $*"),
@@ -69,13 +69,16 @@ lazy val analyzer = (project in file("modules/analyzer")).
     ) ++ akkaDependencies ++ mqttDependencies,
     mainClass := Some("com.example.analyer.Analyzer"),
     fullRunInputTask(run, Compile, "com.example.analyzer.Analyzer"),
-    fullRunTask(runNode1, Compile, "com.example.analyzer.Analyzer", "--host:127.0.0.1", "--port:2551", "--seed-nodes:127.0.0.1:2550,127.0.0.1:2551"),
+    fullRunTask(runNode1, Compile, "com.example.analyzer.Analyzer", "--host:127.0.0.1", "--port:2551", "--seed", "--seed-nodes:127.0.0.1:2550"),
     fullRunTask(runNode2, Compile, "com.example.analyzer.Analyzer", "--host:127.0.0.1", "--port:2552", "--seed-nodes:127.0.0.1:2550,127.0.0.1:2551"),
     fullRunTask(runNode3, Compile, "com.example.analyzer.Analyzer", "--host:127.0.0.1", "--port:2553", "--seed-nodes:127.0.0.1:2550,127.0.0.1:2551"),
     fullRunTask(runNode4, Compile, "com.example.analyzer.Analyzer", "--host:127.0.0.1", "--port:2554", "--seed-nodes:127.0.0.1:2550,127.0.0.1:2551"),
-    dockerExposedPorts := Seq(2551),
+    dockerExposedPorts := Seq(2550),
     dockerEntrypoint := Seq("/bin/sh", "-c",
       "HOST_IP=`ip addr show scope global | grep 'inet' | grep -Eo '[0-9]+\\\\.[0-9]+\\\\.[0-9]+\\\\.[0-9]+'`"
+        // run as cluster seed when didn't pass secondary_seed link
+        + " SECONDARY_SEED_PORT_2550_TCP_ADDR=${SECONDARY_SEED_PORT_2550_TCP_ADDR:-${HOST_IP}}"
+        + " SECONDARY_SEED_PORT_2550_TCP_PORT=${SECONDARY_SEED_PORT_2550_TCP_PORT:-2550}"
         + s" bin/${name.value}" + " -Dconfig.resource=application.docker.conf $*"),
     dockerRepository := Some("crowbary"),
     dockerUpdateLatest := true

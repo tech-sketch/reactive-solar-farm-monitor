@@ -60,15 +60,23 @@ Get Started
 Execute the following commands on the PC which has already been installed [Docker](https://www.docker.com/).
 
 ~~~
-docker run -d --name=broker   -p 61613:61613                        crowbary/apache-apollo
-docker run -d --name=solar_farm_simulator  --link=broker:broker     crowbary/reactive-solar-farm-monitor-solar-farm-simulator
-docker run -d --name=analyzer -p 2551:2551 --link=broker:broker     crowbary/reactive-solar-farm-monitor-analyzer
-docker run -d --name=monitor  -p 9000:9000 --link=analyzer:analyzer crowbary/reactive-solar-farm-monitor
+docker run -d --name=broker                                    crowbary/apache-apollo
+docker run -d --name=solar_farm_simulator --link=broker:broker crowbary/reactive-solar-farm-monitor-solar-farm-simulator
+docker run -d --name=monitor -p 9000:9000                      crowbary/reactive-solar-farm-monitor
+docker run -d --name=analyzer_seed  --link=broker:broker --link=monitor:primary_seed                                      crowbary/reactive-solar-farm-monitor-analyzer
+docker run -d --name=analyzer_node1 --link=broker:broker --link=monitor:primary_seed --link=analyzer_seed:secondary_seed  crowbary/reactive-solar-farm-monitor-analyzer
+docker run -d --name=analyzer_node2 --link=broker:broker --link=monitor:primary_seed --link=analyzer_seed:secondary_seed  crowbary/reactive-solar-farm-monitor-analyzer
 ~~~
 
 Access to http://[DOCKER_HOST]:9000/ from Web browser
 
 * DOCKER_HOST: The IP address of a host on which you executed "docker run" commands.
+
+You can add any number of Analyzer nodes.
+Execute the following command to add an Analyzer node.
+~~~
+docker run -d --link=broker:broker --link=monitor:primary_seed --link=analyzer_seed:secondary_seed  crowbary/reactive-solar-farm-monitor-analyzer
+~~~
 
 ### Use Typesafe Activator
 
