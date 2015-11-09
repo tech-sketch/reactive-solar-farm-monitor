@@ -60,6 +60,16 @@ lazy val runNode4 = taskKey[Unit]("")
 lazy val analyzer = (project in file("modules/analyzer")).
   enablePlugins(JavaAppPackaging).
   settings(commonSettings: _*).
+  settings(
+    // Takipi
+    libraryDependencies += "com.typesafe.cinnamon" %% "cinnamon-takipi" % "1.0.0",
+    fork := true,
+    javaOptions += "-agentlib:TakipiAgent",
+    javaOptions in runNode1 += """-Dtakipi.name="Analyzer1"""",
+    javaOptions in runNode2 += """-Dtakipi.name="Analyzer2"""",
+    javaOptions in runNode3 += """-Dtakipi.name="Analyzer3"""",
+    javaOptions in runNode4 += """-Dtakipi.name="Analyzer4""""
+  ).
   settings(dockerCommonSettings: _*).
   settings(
     name := appName + "-analyzer",
