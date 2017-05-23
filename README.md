@@ -78,15 +78,13 @@ Execute the following command to add an Analyzer node.
 docker run -d --link=broker:broker --link=monitor:primary_seed --link=analyzer_seed:secondary_seed  crowbary/reactive-solar-farm-monitor-analyzer
 ~~~
 
-### Use Typesafe Activator
+### Use sbt
 
 #### 1. Before running
 
-##### (1) Install Typesafe Activator
+##### (1) Install sbt
 
-* Requirements: JDK6+
-* Download the package from [Typesafe Activator's site'](https://www.typesafe.com/get-started)
-* Extract the package and add Activator to your PATH
+Follow the instructions on [Mac](http://www.scala-sbt.org/0.13/docs/ja/Installing-sbt-on-Mac.html), [Windows](http://www.scala-sbt.org/0.13/docs/ja/Installing-sbt-on-Windows.html), or [Linux](http://www.scala-sbt.org/0.13/docs/ja/Installing-sbt-on-Linux.html) to install
 
 ##### (2) Install Apache Apollo
 
@@ -117,7 +115,7 @@ npm install -g bower
 ##### (1) Create a project
 
 ~~~
-activator new reactive-solar-farm-monitor reactive-solar-farm-monitor
+git clone https://github.com/tech-sketch/reactive-solar-farm-monitor.git
 cd  reactive-solar-farm-monitor
 bower install
 ~~~
@@ -131,7 +129,7 @@ ${APOLLO_EXEC}\mybroker\bin\apollo-broker run
 ##### (3) Run Simulator
 
 ~~~
-activator solarFarmSimulator/run
+sbt solarFarmSimulator/run
 ~~~
 
 ##### (4) Run Analyzer
@@ -139,21 +137,21 @@ activator solarFarmSimulator/run
 Requires at least two nodes
 
 ~~~
-activator analyzer/runNode1
-activator analyzer/runNode2
+sbt analyzer/runNode1
+sbt analyzer/runNode2
 ~~~
 
 If you need additional nodes can run to four
 
 ~~~
-activator analyzer/runNode3
-activator analyzer/runNode4
+sbt analyzer/runNode3
+sbt analyzer/runNode4
 ~~~
 
 ##### (5) Run Monitor
 
 ~~~
-activator run
+sbt run
 ~~~
 
 #### 3. Check the application

@@ -72,15 +72,13 @@ Analyzer のノードはいくつでも追加することができ、下記の�
 docker run -d --link=broker:broker --link=monitor:primary_seed --link=analyzer_seed:secondary_seed  crowbary/reactive-solar-farm-monitor-analyzer
 ~~~
 
-### Typesafe Activatorを利用した起動
+### sbtを利用した起動
 
 #### 1. 実行前の環境構築
 
-##### (1) Typesafe Activatorのインストール
+##### (1) sbtのインストール
 
-* JDK6以上が必要
-* [Typesafe Activatorのサイト](https://www.typesafe.com/get-started)よりインストーラをダウンロード
-* 任意ディレクトリに解凍し、環境変数「PATH」に追加
+[Mac](http://www.scala-sbt.org/0.13/docs/ja/Installing-sbt-on-Mac.html)、[Windows](http://www.scala-sbt.org/0.13/docs/ja/Installing-sbt-on-Windows.html)、もしくは [Linux](http://www.scala-sbt.org/0.13/docs/ja/Installing-sbt-on-Linux.html) の手順に従ってインストールしてください
 
 ##### (2) Apache Apolloのインストール
 
@@ -113,7 +111,7 @@ npm install -g bower
 任意ディレクトリでプロジェクトを作成
 
 ~~~
-activator new reactive-solar-farm-monitor reactive-solar-farm-monitor
+git clone https://github.com/tech-sketch/reactive-solar-farm-monitor.git
 cd  reactive-solar-farm-monitor
 bower install
 ~~~
@@ -127,7 +125,7 @@ ${APOLLO_EXEC}\mybroker\bin\apollo-broker run
 ##### (3) Simulatorの実行
 
 ~~~
-activator solarFarmSimulator/run
+sbt solarFarmSimulator/run
 ~~~
 
 ##### (4) Analyzerの実行
@@ -135,21 +133,21 @@ activator solarFarmSimulator/run
 少なくとも2つのノードが必要です
 
 ~~~
-activator analyzer/runNode1
-activator analyzer/runNode2
+sbt analyzer/runNode1
+sbt analyzer/runNode2
 ~~~
 
 追加のノードが必要な場合は4台まで起動できます
 
 ~~~
-activator analyzer/runNode3
-activator analyzer/runNode4
+sbt analyzer/runNode3
+sbt analyzer/runNode4
 ~~~
 
 ##### (5) Monitorの実行
 
 ~~~
-activator run
+sbt run
 ~~~
 
 #### 3. アプリケーションの確認
