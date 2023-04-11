@@ -158,18 +158,6 @@ sbt run
 
 Access to [http://localhost:9000/](http://localhost:9000/) from Web browser
 
-# Contact
-
-Please send feedback to us.
-
-[TIS Inc.](http://www.tis.com/)  
-System Development Technology R&D Office  
-Reactive Systems consulting team  
-
-* <go-reactive@tis.co.jp>.
-
-TIS provides a consulting service about Typesafe Reactive Platform. Please refer to the [our site](http://www.tis.jp/service_solution/goreactive/)(Japanese site) for details.
-
 # License
 
 This application is released under the Apache License version2.0.
