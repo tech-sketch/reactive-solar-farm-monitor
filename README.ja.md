@@ -154,19 +154,6 @@ sbt run
 
 ブラウザで [http://localhost:9000/](http://localhost:9000/) へアクセスしてください。
 
-問い合わせ先
--------------
-フィードバックや不明点等については下記までお問い合わせください。
-
-TIS株式会社  
-生産革新本部 生産革新部 生産技術R&D室  
-リアクティブシステムコンサルティングサービス担当宛
-
-<a href="mailto:go-reactive@tis.co.jp">go-reactive@tis.co.jp</a>
-
-弊社は Typesafe Reactive Platform に関するコンサルティングサービスを提供しています。
-コンサルティングサービスの概要は[こちら](http://www.tis.jp/service_solution/goreactive/)からご確認いただくことができます。
-
 ライセンス
 ----------
 Reactive Solar Farm Monitor は Apache License version 2.0 のもとにリリースされています。
